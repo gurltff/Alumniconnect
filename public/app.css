@@ -69,6 +69,7 @@ img { max-width: 100%; }
 .iconbtn { width: 36px; height: 36px; border-radius: 6px; border: 1px solid var(--line); background: var(--surface); display: grid; place-items: center; cursor: pointer; color: var(--ink-2); position: relative; }
 .iconbtn:hover { background: var(--hover); }
 .iconbtn .dot { position: absolute; top: 7px; right: 8px; width: 7px; height: 7px; border-radius: 50%; background: var(--bad); }
+.mobile-only { display: none; }
 .switch { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--ink-2); cursor: pointer; border: 0; background: none; padding: 4px; }
 .switch i { width: 28px; height: 16px; border-radius: 8px; background: #cdd2da; position: relative; }
 .switch i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; transition: transform .15s; }
@@ -341,6 +342,8 @@ table.t { border-collapse: collapse; width: 100%; font-size: 13px; }
   .nav .badge { position: absolute; top: 2px; right: 20%; margin: 0; }
   .main { padding: 16px max(16px, env(safe-area-inset-right, 0px)) 96px max(16px, env(safe-area-inset-left, 0px)); }
   .hello { width: 100%; }
+  .mobile-only { display: grid; }
+  .switch { font-size: 0; gap: 0; }
   .search { flex: 1; width: auto; }
   .dash { grid-template-columns: 1fr; grid-template-areas: "r" "a" "b" "c" "d"; }
   .rail { grid-template-columns: 1fr; }

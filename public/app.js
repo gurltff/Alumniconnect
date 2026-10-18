@@ -192,6 +192,7 @@ function shell(r) {
       <header class="head"><h1 class="hello">${hello}</h1>
         <form class="search" data-form="topsearch" role="search">${icon('search', 18)}<label for="top-q" hidden>Search people</label><input id="top-q" type="search" placeholder="Search people, skills, achievements" value="${esc(S.people.q)}"></form>
         ${bellHTML()}
+        <button class="iconbtn mobile-only" data-act="logout" aria-label="Log out" title="Log out">${icon('out', 18)}</button>
         <button class="switch" data-act="explain" aria-pressed="${S.explain}" title="Show a short note on each page about how the feature helps"><i></i>Feature notes</button>
       </header>
       <section id="view"></section>
@@ -593,7 +594,8 @@ async function viewSettings() {
         <button class="btn btn-p" type="submit">Update status</button></form></section>` : ''}
       <section class="card"><div class="card-h"><h2>Photo and banner</h2></div>
         <div class="row" style="gap:14px">${av(S.me, 'av-lg')}<div class="row"><button class="btn" data-act="photo">Change photo</button>${S.me.avatar_url ? '<button class="btn btn-g" data-act="rmphoto">Remove</button>' : ''}<button class="btn" data-act="banner">Change banner</button></div></div></section>
-      <section class="card"><div class="card-h"><h2>Account</h2></div><p class="small">${esc(u.email)}</p><p class="small muted">${u.college_id ? 'Roll number ' + esc(u.college_id) : esc(u.scope || '')}</p></section>
+      <section class="card"><div class="card-h"><h2>Account</h2></div><p class="small">${esc(u.email)}</p><p class="small muted">${u.college_id ? 'Roll number ' + esc(u.college_id) : esc(u.scope || '')}</p>
+        <button class="btn" style="margin-top:12px" data-act="logout">${icon('out', 15)}Log out</button></section>
     </div></div>`;
 }
 
