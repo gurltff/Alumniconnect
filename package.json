@@ -1,0 +1,14 @@
+{
+  "name": "alumniconnect",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Verified student and alumni network for a college: profiles, journeys, chat requests, faculty verification and IQAC reports.",
+  "main": "server/index.js",
+  "scripts": {
+    "seed": "node --no-warnings server/seed.js",
+    "start": "node --no-warnings server/index.js",
+    "dev": "node --no-warnings --watch server/index.js"
+  },
+  "engines": { "node": ">=22.13" },
+  "dependencies": { "express": "4.21.2" }
+}
