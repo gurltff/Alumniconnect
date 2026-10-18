@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { q, DATA_DIR, hashPassword } = require('./db');
+const { saveOutcome } = require('./records');
 
 const PASSWORD = 'demo1234';
 const HASH = hashPassword(PASSWORD);
@@ -20,7 +21,7 @@ const DEPTS = [
 ];
 
 // Start from an empty database every time.
-for (const t of ['audit_log', 'reports', 'sessions', 'messages', 'chats', 'chat_requests', 'milestones', 'users', 'departments']) q.run(`DELETE FROM ${t}`);
+for (const t of ['scans', 'outcomes', 'audit_log', 'reports', 'sessions', 'messages', 'chats', 'chat_requests', 'milestones', 'users', 'departments']) q.run(`DELETE FROM ${t}`);
 const up = path.join(DATA_DIR, 'uploads');
 for (const f of fs.readdirSync(up)) fs.unlinkSync(path.join(up, f));
 
@@ -180,6 +181,16 @@ q.tx(() => {
   for (const [n, b] of [['priya', 'navy'], ['ishita', 'teal'], ['ananya', 'slate'], ['kavya', 'forest'], ['meera', 'sand'], ['sneha', 'plum'], ['harshita', 'slate'], ['aditi', 'forest']])
     q.run('UPDATE users SET banner = ? WHERE id = ?', 'preset:' + b, ids[n]);
 
+  const iqac = { source: 'iqac-form', verifier: admin, evidence: null };
+  saveOutcome(ids.ishita, { status: 'Job', placement_type: 'On-campus', designation: 'Software Engineer II', company: 'Brightpath Labs', location: 'Bengaluru', package_lpa: 14.5,
+    internship_done: 'Yes', internship_count: 2, internship_details: 'Brightpath Labs, 8 weeks; Google Summer of Code 2022', exams_appeared: ['GATE'] }, iqac);
+  saveOutcome(ids.tanvi, { status: 'Job', placement_type: 'Off-campus', designation: 'Correspondent', company: 'The Delhi Chronicle', location: 'New Delhi', package_lpa: 6.2, internship_done: 'Yes', internship_count: 1 }, iqac);
+  saveOutcome(ids.ananya, { status: 'Research', study_course: 'PhD Physics (JRF)', study_university: 'University of Delhi', exams_passed: ['NET'], exams_appeared: ['NET', 'GATE'], internship_done: 'Yes', internship_count: 1,
+    internship_details: 'Summer Research Fellowship, 8 weeks' }, iqac);
+  saveOutcome(ids.kavya, { status: 'Govt services', designation: 'Officer trainee', company: 'Civil Services, Government of India', location: 'Mussoorie', exams_passed: ['UPSC'], exams_appeared: ['UPSC', 'NET'] }, iqac);
+  saveOutcome(ids.meera, { status: 'Entrepreneurship', company: 'Threadloop', location: 'Jaipur', internship_done: 'Yes', internship_count: 1, internship_details: 'Kestrel Advisory, summer 2017' }, iqac);
+  saveOutcome(ids.sneha, { status: 'Higher studies', study_course: 'PhD Chemistry', study_university: 'University of Toronto', exams_passed: ['GATE'], exams_appeared: ['GATE', 'NET'] }, iqac);
+
   // Register: fictional synthetic records so counts, charts and reports have volume.
   let seed = 20261018;
   const R = () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
@@ -198,6 +209,12 @@ q.tx(() => {
     Education: [['Teacher', 'a Delhi public school'], ['Academic Coordinator', 'Lumen Learning']],
     Policy: [['Research Associate', 'Civic Lens Foundation'], ['Policy Analyst', 'Policy Bridge India']]
   };
+  JOBS.Tech.push(['Software Engineer', 'Corelink Software'], ['Data Analyst', 'Datastream Analytics'], ['Associate Consultant', 'Quantra Systems']);
+  JOBS.Finance.push(['Analyst', 'Northgate Securities'], ['Business Analyst', 'Kestrel Advisory']);
+  JOBS.Education.push(['Teacher', 'Brightminds Academy']);
+  const PAY = { Tech: [4.5, 16], Finance: [4, 11], Media: [3, 6.5], Education: [3, 5.5], Policy: [3.5, 7.5] };
+  const CITIES = ['Gurugram', 'Bengaluru', 'New Delhi', 'Noida', 'Pune', 'Mumbai', 'Hyderabad'];
+  const UNIS = ['University of Delhi', 'Jawaharlal Nehru University', 'IIT Delhi', 'University of Edinburgh', 'IIM Indore', 'NIT Warangal'];
   const SECTOR_W = { CS: [8, 1, 0, 1, 0], MA: [5, 3, 0, 2, 0], CM: [1, 8, 0, 1, 0], EC: [1, 6, 0, 1, 2], EN: [0, 1, 6, 2, 1], HI: [0, 1, 2, 4, 3], PS: [0, 1, 2, 2, 5], PH: [3, 2, 0, 4, 1], CH: [2, 2, 0, 5, 1] };
   const TPL = [
     ['achievement', 'tech', 'College', 6, ['Winner, college coding contest']], ['achievement', 'tech', 'University', 6, ['1st prize, inter-college hackathon', 'Runner-up, inter-college coding contest']],
@@ -231,13 +248,24 @@ q.tx(() => {
       if (status === 'Research') now = 'PhD scholar, ' + pick(['University of Delhi', 'IISER Pune', 'Jawaharlal Nehru University']);
       if (status === 'Govt services') now = pick(['Inspector (SSC CGL)', 'Probationary Officer, public sector bank', 'Assistant Professor (UGC-NET)', 'State civil services officer']);
       if (status === 'Entrepreneurship') now = 'Founder, ' + pick(['Kraftbox', 'Leafline', 'Tutorly', 'Spicetrail', 'Loomwise']);
+      const oc = { status, internship_done: R() < 0.6 ? 'Yes' : 'No', exams_passed: [], exams_appeared: [] };
+      if (oc.internship_done === 'Yes') { oc.internship_count = 1 + Math.floor(R() * 3); oc.internship_details = pick(['Summer internship, 2 months', 'VCIS internship, 6 weeks', 'Research internship, 8 weeks']); }
+      if (status === 'Job') { const j = JOBS[sector].find(x => `${x[0]}, ${x[1]}` === now) || pick(JOBS[sector]);
+        const [lo, hi] = PAY[sector]; Object.assign(oc, { designation: j[0], company: j[1], location: pick(CITIES), placement_type: R() < 0.58 ? 'On-campus' : 'Off-campus',
+          package_lpa: Math.round((lo + (hi - lo) * Math.pow(R(), 1.6)) * 10) / 10 }); if (R() < 0.06) oc.exams_appeared.push('CAT'); }
+      if (status === 'Higher studies') { const parts = now.split(', '); Object.assign(oc, { study_course: parts[0], study_university: parts.slice(1).join(', ') });
+        if (R() < 0.4) oc.exams_passed.push(pick(['GATE', 'NET'])); oc.exams_appeared.push(...oc.exams_passed, 'GATE'); }
+      if (status === 'Research') { Object.assign(oc, { study_course: 'PhD', study_university: now.replace('PhD scholar, ', '') }); oc.exams_passed.push('NET'); oc.exams_appeared.push('NET', 'GATE'); }
+      if (status === 'Govt services') { Object.assign(oc, { designation: now, company: 'Government service' }); oc.exams_passed.push(pick(['UPSC', 'State PSC', 'NET', 'Others'])); oc.exams_appeared.push(...oc.exams_passed); }
+      if (status === 'Entrepreneurship') Object.assign(oc, { company: now.replace('Founder, ', ''), location: pick(CITIES) });
       const stale = R() < 0.07;
       const mentor = g <= 2024 && R() < 0.09;
       const name = pick(FN) + ' ' + pick(LN);
       const uid = addUser({ email: `alumni${n}@college.example`, role: 'alumni', name, dept, adm: g - 3, grad: g, cid: String(g - 3).slice(2) + dept + (100 + n),
         status, now, sector, updated: stale ? `${Math.min(g, 2023)}-08-01` : `${2025 + (R() < 0.5 ? 1 : 0)}-0${1 + Math.floor(R() * 8)}-10`,
         headline: now || `${COURSE[dept]}, class of ${g}`, mentor, accepts: mentor || R() < 0.6, topics: mentor ? ['Career advice', 'Resume review'] : [],
-        seen: R() < 0.32 ? '2026-10-0' + (1 + Math.floor(R() * 9)) + ' 12:00:00' : '2025-12-01 12:00:00' });
+        seen: R() < 0.32 ? '2026-10-0' + (1 + Math.floor(R() * 9)) + ' 12:00:00' : '2025-12-01 12:00:00', account: g <= 2017 ? 'unclaimed' : 'active' });
+      if (status !== 'Not reported') saveOutcome(uid, oc, { source: g <= 2017 ? 'import' : R() < 0.5 ? 'self' : 'iqac-form', verifier: R() < 0.8 ? admin : null, evidence: null });
       for (let a = 0, c = wpick([0, 1, 2, 3], [40, 33, 18, 9]); a < c; a++) synthAch(uid, dept, g - 3 + Math.floor(R() * 3), false);
     }
   }
@@ -248,6 +276,25 @@ q.tx(() => {
         headline: `${COURSE[dept]} student`, seen: R() < 0.7 ? '2026-10-1' + Math.floor(R() * 8) + ' 12:00:00' : '2026-03-01 12:00:00' });
       if (adm < 2026) for (let a = 0, c = wpick([0, 1, 2, 3], [48, 30, 15, 7]); a < c; a++) synthAch(uid, dept, adm + Math.floor(R() * (2027 - adm)), true);
     }
+  }
+
+  // Sample scanned paper forms (fictional people) so the review screen works without an AI key.
+  const sampleForms = [
+    { name: 'Ritika Malhotra', roll_no: '21MA0457', course_text: 'B.Sc. (H) Mathematics', dept: 'MA', adm_year: 2021, grad_year: 2024, email: 'ritika.m@example.com', mobile: '9800000123',
+      internship_done: true, internship_count: 1, internship_details: 'Summer Internship Programme, Centre for Research, 2 months', status: 'Higher studies', study_course: 'M.Sc. Statistics',
+      study_university: 'University of Delhi', designation: null, company: null, location: null, placement_type: null, package_lpa: null, exams_passed: [], exams_appeared: ['GATE'], uncertain: [] },
+    { name: 'Neha Saxena', roll_no: '20CM0311', course_text: 'B.Com (H)', dept: 'CM', adm_year: 2020, grad_year: 2023, email: 'neha.saxena@example.com', mobile: '9800000456',
+      internship_done: true, internship_count: 2, internship_details: 'Audit intern, 6 weeks; Enactus project', status: 'Job', study_course: null, study_university: null,
+      designation: 'Audit Associate', company: 'Ledgerline & Co.', location: 'Gurugram', placement_type: null, package_lpa: 5.4, exams_passed: ['CAT'], exams_appeared: ['CAT'], uncertain: [] },
+    { name: 'Kritika Jain', roll_no: '19EN0150', course_text: 'B.A. (H) English', dept: 'EN', adm_year: 2019, grad_year: 2022, email: null, mobile: '98000007?9',
+      internship_done: false, internship_count: null, internship_details: null, status: 'Job', study_course: null, study_university: null,
+      designation: 'Content Writer', company: 'Inkwell Publishing', location: 'Noida', placement_type: null, package_lpa: 4.2, exams_passed: [], exams_appeared: ['NET'], uncertain: ['mobile', 'email'] }
+  ];
+  for (const f of sampleForms) {
+    const ref = 'sample-' + f.roll_no.toLowerCase() + '.svg';
+    fs.writeFileSync(path.join(up, ref), formSVG(f));
+    q.run(`INSERT INTO scans (file_ref, file_name, mime, batch_label, status, extracted, uploaded_by, uploaded_at) VALUES (?,?,?,?,?,?,?,?)`,
+      ref, `Form ${f.roll_no}.jpg`, 'image/svg+xml', 'Sample scans (fictional)', 'ready', JSON.stringify({ is_alumni_form: true, ...f }), admin, '2026-10-18 09:30:00');
   }
 
   // A registration and a report waiting for IQAC.
@@ -273,6 +320,29 @@ q.tx(() => {
   q.run('INSERT INTO audit_log (actor_id, action, target, created_at) VALUES (?,?,?,?)', admin, 'Imported records', '42 rows from the 2016 Chemistry register', '2026-10-16 11:30:00');
   q.run('INSERT INTO audit_log (actor_id, action, target, created_at) VALUES (?,?,?,?)', admin, 'Exported report', 'NAAC student progression, batch 2026', '2026-10-18 10:05:00');
 });
+
+function formSVG(f) {
+  const e = v => String(v ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const hand = (x, y, t, size = 22) => `<text x="${x}" y="${y}" font-family="'Segoe Print','Bradley Hand','Comic Sans MS',cursive" font-size="${size}" fill="#1f3a8a">${e(t)}</text>`;
+  const rows = [['Student Name', f.name], ['Examination Roll No.', f.roll_no], ['Course Name', f.course_text], ['Graduation passing year (Batch)', `${f.adm_year}-${f.grad_year}`],
+    ['Email Id', f.email || ''], ['Mobile No', String(f.mobile || '').replace('?', '')], ['Internship’s done during graduation year (Y/N)', f.internship_done ? 'Yes' : 'No'],
+    ['If yes, number of Internships', f.internship_count || ''], ['Details of internship', f.internship_details || ''],
+    ['Higher studies: course and university', [f.study_course, f.study_university].filter(Boolean).join(', ') || 'NA'],
+    ['Job: designation, company, location', [f.designation, f.company, f.location].filter(Boolean).join(', ') || 'NA'], ['Annual package', f.package_lpa ? f.package_lpa + ' LPA' : 'NA']];
+  let y = 210, body = '';
+  for (const [k, v] of rows) { body += `<rect x="60" y="${y}" width="730" height="44" fill="none" stroke="#333"/><line x1="380" y1="${y}" x2="380" y2="${y + 44}" stroke="#333"/>
+    <text x="70" y="${y + 27}" font-family="Arial" font-size="14">${e(k)}</text>${hand(392, y + 30, String(v).slice(0, 34), String(v).length > 26 ? 17 : 21)}`; y += 44; }
+  const box = (x, yy, label, ticked) => `<text x="${x}" y="${yy + 18}" font-family="Arial" font-size="14">${label}</text><rect x="${x + 70}" y="${yy}" width="34" height="24" fill="none" stroke="#333"/>${ticked ? hand(x + 76, yy + 20, '✓', 22) : ''}`;
+  const exams = (yy, list) => ['NET', 'SET/SLET', 'GATE', 'CAT', 'IAS/IPS', 'State PSC', 'UPSC', 'Others'].map((n, i) => box(60 + (i % 4) * 180, yy + Math.floor(i / 4) * 40, n, list.includes(n))).join('');
+  y += 30;
+  body += `<text x="60" y="${y}" font-family="Arial" font-size="15" font-weight="bold">Have you passed any of the following competitive exams? If yes please tick.</text>${exams(y + 16, f.exams_passed)}`;
+  y += 120;
+  body += `<text x="60" y="${y}" font-family="Arial" font-size="15" font-weight="bold">Have you appeared in any of the following competitive exams? If yes please tick.</text>${exams(y + 16, f.exams_appeared)}`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="850" height="1100" viewBox="0 0 850 1100"><rect width="850" height="1100" fill="#fbfaf6"/>
+    <text x="60" y="80" font-family="Arial" font-size="22">Alumni Database form:</text><text x="60" y="115" font-family="Arial" font-size="18">Course Name</text>${hand(180, 115, f.course_text)}
+    <text x="60" y="150" font-family="Arial" font-size="13" fill="#444">Dear alumni, please take some time to fill in this information. (Sample form · fictional person)</text>
+    ${body}<text x="60" y="1050" font-family="Arial" font-size="14">Student Signature</text>${hand(60, 1030, f.name.split(' ')[0], 26)}</svg>`;
+}
 
 const c = q.get(`SELECT (SELECT count(*) FROM users) u, (SELECT count(*) FROM milestones) m, (SELECT count(*) FROM milestones WHERE status='pending') p`);
 console.log(`Seeded ${c.u} users, ${c.m} milestones (${c.p} waiting for verification).`);

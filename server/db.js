@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS users (
   topics TEXT NOT NULL DEFAULT '[]',
   links TEXT NOT NULL DEFAULT '[]',
   scope TEXT NOT NULL DEFAULT '',          -- faculty/admin: what they verify
-  account TEXT NOT NULL DEFAULT 'active' CHECK (account IN ('pending','active','rejected','disabled')),
+  account TEXT NOT NULL DEFAULT 'active' CHECK (account IN ('pending','active','rejected','disabled','unclaimed')),  -- unclaimed: record from paper/import, no login yet
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   last_seen TEXT
 );
@@ -118,6 +118,49 @@ CREATE TABLE IF NOT EXISTS reports (
   status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','resolved','dismissed')),
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- One row per student/alumni: the fields of the college's paper "Alumni Database form".
+CREATE TABLE IF NOT EXISTS outcomes (
+  user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  mobile TEXT,
+  internship_done INTEGER,
+  internship_count INTEGER,
+  internship_details TEXT,
+  status TEXT,                               -- Job, Higher studies, Research, Govt services, Entrepreneurship, Other, Not reported
+  placement_type TEXT CHECK (placement_type IS NULL OR placement_type IN ('On-campus','Off-campus')),
+  company TEXT,
+  designation TEXT,
+  location TEXT,
+  package_lpa REAL,                          -- annual package in lakh per annum
+  study_course TEXT,
+  study_university TEXT,
+  exams_passed TEXT NOT NULL DEFAULT '[]',
+  exams_appeared TEXT NOT NULL DEFAULT '[]',
+  source TEXT NOT NULL DEFAULT 'self' CHECK (source IN ('self','iqac-form','paper-scan','import')),
+  evidence_ref TEXT,
+  evidence_label TEXT,
+  verified_by INTEGER REFERENCES users(id),
+  verified_at TEXT,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Scanned paper forms waiting to be read and reviewed.
+CREATE TABLE IF NOT EXISTS scans (
+  id INTEGER PRIMARY KEY,
+  file_ref TEXT NOT NULL,
+  file_name TEXT NOT NULL,
+  mime TEXT NOT NULL,
+  batch_label TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'queued' CHECK (status IN ('queued','reading','ready','failed','approved','discarded')),
+  extracted TEXT,
+  error TEXT,
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  uploaded_by INTEGER REFERENCES users(id),
+  uploaded_at TEXT NOT NULL DEFAULT (datetime('now')),
+  reviewed_by INTEGER REFERENCES users(id),
+  reviewed_at TEXT
+);
+CREATE INDEX IF NOT EXISTS scans_status ON scans(status, id);
 
 CREATE TABLE IF NOT EXISTS audit_log (
   id INTEGER PRIMARY KEY,

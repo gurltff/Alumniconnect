@@ -53,6 +53,7 @@ const P = {
   file: '<path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5"/>',
   bulb: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>',
   camera: '<path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/>',
+  upload: '<path d="M12 16V4M7 9l5-5 5 5M4 20h16"/>',
   dots: '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
   left: '<path d="M15 6l-6 6 6 6"/>', right: '<path d="M9 6l6 6-6 6"/>'
 };
@@ -73,6 +74,8 @@ const S = {
   prof: { jf: 'all', ph: '', open: new Set(), id: null },
   msg: { tab: 'chats', last: 0 },
   ver: { sel: null, mode: null },
+  plc: { batch: '', dept: '', q: '' },
+  dig: { sel: null, filter: '' },
   adm: { tab: 'overview', dept: '', rtype: 'progression', ryear: '', rq: '', rrole: '', rpage: 0 },
   modal: null
 };
@@ -128,6 +131,8 @@ const WHY = {
   verify: ['Faculty approve achievements in one click, with the proof in front of them.', 'Students get a “Verified” badge that recruiters and universities can trust.', 'Each item goes to the right person automatically: society coordinator, department moderator or IQAC. Nothing is lost in email.'],
   admin: ['One-click NAAC and NIRF reports from verified data.', 'Students stop filling the same Google Form every year.', 'IQAC saves weeks of collecting data each accreditation cycle, and every row links back to its proof and verifier.'],
   fame: ['A Wall of Fame built only from verified achievements.', 'Sports, research, exams, startups and debate get equal recognition, not just a single leaderboard.', 'A ready showcase for the website, admissions brochures and the annual report.'],
+  placements: ['Placement records the college can present: by batch, course and company, with average and median packages.', 'Students see which companies hire from their course and what their seniors went on to do.', 'Ready numbers for NIRF, NAAC, the placement brochure and the annual report, straight from verified alumni forms instead of manual counting.'],
+  digitize: ['Old paper forms become searchable records without retyping every one.', 'Graduates from older batches appear in the alumni register and can claim their profile later using their roll number.', 'Staff scan forms in batches. AI reads each one into the form fields, and a person checks it against the scan before it is saved, with the scan kept as proof.'],
   settings: ['People control what they share and when they can be contacted.', 'Turn chat requests on or off, list mentoring topics, and keep your current status up to date.', 'Alumni status updates feed placement and higher-studies figures without a separate survey.']
 };
 
@@ -135,7 +140,7 @@ const WHY = {
 function route() { const h = location.hash.replace(/^#\/?/, ''); const [name, id] = h.split('/'); return { name: name || 'login', id }; }
 async function boot() {
   try { S.meta = await api('/api/meta'); } catch { }
-  try { const r = await api('/api/me'); S.me = r.user; S.counts = r.counts; } catch { S.me = null; }
+  try { const r = await api('/api/me'); S.me = r.user; S.counts = r.counts; S.rmeta = await api('/api/records/meta'); } catch { S.me = null; }
   window.addEventListener('hashchange', render);
   render();
 }
@@ -146,13 +151,14 @@ async function render() {
   if (!S.me && !['login', 'register'].includes(r.name)) { location.hash = '#/login'; return; }
   if (S.me && ['login', 'register', ''].includes(r.name)) { location.hash = home(); return; }
   if (!S.me) { $('app').innerHTML = r.name === 'register' ? viewRegister() : await viewLogin(); return; }
-  const views = { dashboard: viewDash, u: viewProfile, people: viewPeople, messages: viewMessages, verify: viewVerify, admin: viewAdmin, fame: viewFame, settings: viewSettings };
+  const views = { placements: viewPlacements, digitize: viewDigitize, dashboard: viewDash, u: viewProfile, people: viewPeople, messages: viewMessages, verify: viewVerify, admin: viewAdmin, fame: viewFame, settings: viewSettings };
   const v = views[r.name] || viewDash;
   $('app').innerHTML = shell(r, `<div class="empty">Loading…</div>`);
   try { $('view').innerHTML = await v(r.id); } catch (e) { $('view').innerHTML = `<div class="card empty">${icon('info', 28)}<p>${esc(e.message)}</p></div>`; }
   afterRender(r);
 }
 function afterRender(r) {
+  toggleOutcomeSections();
   if (r.name === 'messages' && r.id) { scrollThread(); pollT = setInterval(pollChat, 3000); }
   clearInterval(countsT); countsT = setInterval(refreshCounts, 15000);
 }
@@ -169,7 +175,8 @@ function navItems() {
   if (r === 'student' || r === 'alumni') items.push(['dashboard', 'Dashboard', 'home'], ['u/' + S.me.id, 'My profile', 'user']);
   if (r === 'admin') items.push(['admin', 'Dashboard', 'chart']);
   if (r === 'admin' || r === 'faculty') items.push(['verify', 'Verify', 'shield', c.queue]);
-  items.push(['people', 'People', 'users'], ['messages', 'Messages', 'message', (c.requests || 0) + (c.unread || 0)], ['fame', 'Wall of Fame', 'trophy'], ['settings', 'Settings', 'gear']);
+  if (r === 'admin') items.push(['digitize', 'Digitize records', 'upload']);
+  items.push(['placements', 'Placements', 'case'], ['people', 'People', 'users'], ['messages', 'Messages', 'message', (c.requests || 0) + (c.unread || 0)], ['fame', 'Wall of Fame', 'trophy'], ['settings', 'Settings', 'gear']);
   return items;
 }
 function navHTML(r) {
@@ -177,7 +184,7 @@ function navHTML(r) {
   return `<nav class="nav" id="nav" aria-label="Main">${navItems().map(([k, l, ic, n]) => `<button data-go="#/${k}" ${cur === k ? 'aria-current="page"' : ''}>${icon(ic, 20)}<span>${l}</span>${n ? `<span class="badge">${n}</span>` : ''}</button>`).join('')}</nav>`;
 }
 const bellHTML = () => `<button class="iconbtn" id="bell" data-go="#/messages" aria-label="Messages and requests">${icon('bell', 22)}${(S.counts.requests || 0) + (S.counts.unread || 0) ? '<span class="dot"></span>' : ''}</button>`;
-const TITLES = { people: 'People', messages: 'Messages', verify: 'Verification', admin: 'IQAC Dashboard', fame: 'Wall of Fame', settings: 'Settings', u: 'Profile' };
+const TITLES = { placements: 'Placements', digitize: 'Digitize records', people: 'People', messages: 'Messages', verify: 'Verification', admin: 'IQAC Dashboard', fame: 'Wall of Fame', settings: 'Settings', u: 'Profile' };
 function shell(r) {
   const hr = new Date().getHours(), greet = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
   const hello = r.name === 'dashboard' ? `${greet}, ${esc(first(S.me.name))}` : TITLES[r.name] || 'Dashboard';
@@ -361,7 +368,7 @@ async function viewProfile(id) {
         <h2 class="pf-name">${esc(u.name)}${verAch.length ? `<span class="st st-ok">${icon('shield', 13)}${verAch.length} verified achievements</span>` : ''}</h2>
         <p style="font-size:15px;margin-top:2px">${esc(u.headline)}</p>
         <p class="small muted" style="margin-top:4px">${esc(meta(u))}${u.location ? ' · ' + esc(u.location) : ''}${u.college_id ? ` · <span class="mono">${esc(u.college_id)}</span>` : ''}</p>
-        <div class="row" style="margin-top:10px">${u.role === 'alumni' && u.status ? `<span class="chip chip-a">${icon('case', 12)}${esc(u.status)}${u.status_updated ? ' · confirmed ' + fmtDay(u.status_updated) : ''}</span>` : ''}
+        <div class="row" style="margin-top:10px">${d.unclaimed ? '<span class="chip">From the college register · no login yet</span>' : ''}${u.role === 'alumni' && u.status ? `<span class="chip chip-a">${icon('case', 12)}${esc(u.status)}${u.status_updated ? ' · confirmed ' + fmtDay(u.status_updated) : ''}</span>` : ''}
           ${u.mentor ? '<span class="chip chip-a">Open to mentoring</span>' : ''}${u.links.map(l => `<span class="chip">${icon('link', 12)}${esc(l)}</span>`).join('')}</div>
         <div class="row" style="margin-top:14px">${own ? `<button class="btn btn-p" data-act="add">${icon('plus', 15)}Add to journey</button><button class="btn" data-go="#/settings">Edit profile</button>` : chatBtn(u, d.relation)}
           <button class="btn" data-act="copy" data-t="${esc(link)}">${icon('copy', 15)}Copy profile link</button>
@@ -542,9 +549,11 @@ async function aRecords() {
   return `<div class="stack" style="gap:12px"><div class="row">
       <div class="fld" style="flex:2;min-width:200px"><label for="a-rq">Search records</label><input id="a-rq" type="search" data-a="rq" value="${esc(a.rq)}" placeholder="Name, roll number or email"></div>
       <div class="fld" style="flex:1;min-width:140px"><label for="a-rrole">Role</label><select id="a-rrole" data-a="rrole"><option value="">All</option><option value="alumni" ${a.rrole === 'alumni' ? 'selected' : ''}>Alumni</option><option value="student" ${a.rrole === 'student' ? 'selected' : ''}>Students</option></select></div></div>
-    <div class="tw"><table class="t"><thead><tr><th>Roll number</th><th>Name</th><th>Role</th><th>Department</th><th>Batch</th><th>Status now</th><th class="n">Verified</th><th>Account</th></tr></thead><tbody>
+    <div class="tw"><table class="t"><thead><tr><th>Roll number</th><th>Name</th><th>Role</th><th>Department</th><th>Batch</th><th>Status now</th><th class="n">Achievements</th><th>Alumni form</th><th>Account</th></tr></thead><tbody>
       ${r.rows.map(x => `<tr><td class="mono">${esc(x.college_id)}</td><td><button class="link" data-go="#/u/${x.id}">${esc(x.name)}</button></td><td>${x.role === 'alumni' ? 'Alumni' : 'Student'}</td><td>${esc(deptName(x.dept))}</td>
-        <td>${x.adm_year}–${x.grad_year ? String(x.grad_year).slice(2) : ''}</td><td>${esc(x.now_title || x.status || (x.role === 'student' ? 'Studying' : 'Not reported'))}</td><td class="n">${x.verified}</td><td>${x.account === 'active' ? pill('verified').replace('Verified', 'Active') : pill('pending')}</td></tr>`).join('')}</tbody></table></div>
+        <td>${x.adm_year}–${x.grad_year ? String(x.grad_year).slice(2) : ''}</td><td>${esc(x.now_title || x.status || (x.role === 'student' ? 'Studying' : 'Not reported'))}</td><td class="n">${x.verified}</td>
+        <td>${x.role === 'alumni' ? `<button class="link small" data-act="editform" data-id="${x.id}">${x.form_source ? (x.form_verified ? 'Verified' : 'Review') : 'Add'} · ${({ self: 'by alumna', 'iqac-form': 'IQAC', 'paper-scan': 'scan', import: 'import' })[x.form_source] || 'none'}</button>` : '<span class="muted small">Student</span>'}</td>
+        <td>${x.account === 'active' ? '<span class="small">Active</span>' : x.account === 'unclaimed' ? '<span class="small muted">No login yet</span>' : pill('pending')}</td></tr>`).join('')}</tbody></table></div>
     <div class="pager"><span class="small muted">${fmtN(r.page * 25 + 1)}–${fmtN(Math.min(r.total, r.page * 25 + 25))} of ${fmtN(r.total)}</span>
       <div class="row"><button class="btn btn-sm" data-act="rpage" data-k="-1" ${r.page ? '' : 'disabled'}>Previous</button><button class="btn btn-sm" data-act="rpage" data-k="1" ${(r.page + 1) * 25 < r.total ? '' : 'disabled'}>Next</button></div></div></div>`;
 }
@@ -570,6 +579,7 @@ async function viewFame() {
 /* ---------- settings ---------- */
 async function viewSettings() {
   const u = S.me, alum = u.role === 'alumni', person = u.role === 'student' || alum;
+  const outcome = alum ? (await api('/api/me/outcome')).outcome : null;
   return `${why('settings')}<div class="grid2" style="align-items:start">
     <section class="card"><div class="card-h"><h2>Profile</h2></div><form class="stack" data-form="profile" style="gap:12px">
       <div class="fld"><label for="s-head">Headline</label><input id="s-head" type="text" maxlength="140" value="${esc(u.headline)}"></div>
@@ -585,18 +595,164 @@ async function viewSettings() {
         <div class="fld"><label for="s-top">Mentoring topics</label><input id="s-top" type="text" value="${esc(u.topics.join(', '))}"><small>Separate with commas.</small></div>` : ''}
         <p class="small muted">${icon('lock', 13)} Your email and phone number are never shown. People see your profile and can only message you after you accept.</p>
         <button class="btn btn-p" type="submit">Save</button></form></section>` : ''}
-      ${alum ? `<section class="card"><div class="card-h"><h2>What are you doing now?</h2></div><form class="stack" data-form="status" style="gap:12px">
-        <p class="small">Current: <b>${esc(u.now_title || u.status || 'Not reported')}</b>${u.status_updated ? ` · confirmed ${fmtDay(u.status_updated)}` : ''}</p>
-        <div class="fld"><label for="s-st">Status</label><select id="s-st">${S.meta.statuses.map(s => `<option ${u.status === s ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
-        <div class="fld"><label for="s-tt">Role, course or exam</label><input id="s-tt" type="text" value="${esc(u.now_title || '')}" placeholder="For example: Data Analyst, Quantra Systems"></div>
-        <div class="fld"><label for="s-mo">Since</label><input id="s-mo" type="month" max="${thisMonth()}" value="${thisMonth()}"></div>
-        <p class="small muted">Keeping the same text confirms your status. A change goes to IQAC for approval first.</p>
-        <button class="btn btn-p" type="submit">Update status</button></form></section>` : ''}
+      ${alum ? `<section class="card"><div class="card-h"><h2>Alumni form</h2><span class="small muted">${outcome?.verified ? 'Verified by IQAC' : outcome ? 'Not verified yet' : 'Not filled'}</span></div>
+        <p class="small muted" style="margin-bottom:12px">The same questions as the college’s paper alumni form. This feeds placement and higher-studies reports, so keep it current.</p>
+        <form class="stack" data-form="myoutcome" style="gap:14px">${outcomeForm(outcome || {}, { evidence: true })}
+          <button class="btn btn-p" type="submit">Save form</button></form></section>` : ''}
       <section class="card"><div class="card-h"><h2>Photo and banner</h2></div>
         <div class="row" style="gap:14px">${av(S.me, 'av-lg')}<div class="row"><button class="btn" data-act="photo">Change photo</button>${S.me.avatar_url ? '<button class="btn btn-g" data-act="rmphoto">Remove</button>' : ''}<button class="btn" data-act="banner">Change banner</button></div></div></section>
       <section class="card"><div class="card-h"><h2>Account</h2></div><p class="small">${esc(u.email)}</p><p class="small muted">${u.college_id ? 'Roll number ' + esc(u.college_id) : esc(u.scope || '')}</p>
         <button class="btn" style="margin-top:12px" data-act="logout">${icon('out', 15)}Log out</button></section>
     </div></div>`;
+}
+
+/* ---------- alumni form (same questions as the paper form) ---------- */
+function outcomeForm(o, opts) {
+  const R = S.rmeta || { statuses: [], exams: [], placement: [] }, P = opts.prefix || 'o';
+  const un = new Set(opts.uncertain || []);
+  const f = (id, label, val, type = 'text', extra = '') => `<div class="fld ${un.has(id) ? 'unsure' : ''}"><label for="${P}-${id}">${label}${un.has(id) ? ' <span class="st st-warn">Check: hard to read</span>' : ''}</label>
+    <input id="${P}-${id}" type="${type}" value="${esc(val ?? '')}" ${extra}></div>`;
+  const sel = (id, label, val, options, blank = 'Not filled') => `<div class="fld ${un.has(id) ? 'unsure' : ''}"><label for="${P}-${id}">${label}</label><select id="${P}-${id}" ${id === 'status' ? 'data-ostatus' : ''}><option value="">${blank}</option>${options.map(x => `<option ${String(val ?? '') === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></div>`;
+  const yn = o.internship_done === true ? 'Yes' : o.internship_done === false ? 'No' : '';
+  const checks = (name, list) => `<div class="exams">${R.exams.map(e => `<label class="check"><input type="checkbox" name="${P}-${name}" value="${esc(e)}" ${(list || []).includes(e) ? 'checked' : ''}> ${esc(e)}</label>`).join('')}</div>`;
+  const deptOpts = S.meta.departments.map(d => `<option value="${d.code}" ${o.dept === d.code ? 'selected' : ''}>${esc(d.course)}</option>`).join('');
+  return `${opts.identity ? `<fieldset class="ofs"><legend>Student details</legend><div class="ogrid">
+      ${f('name', 'Student name', o.name, 'text', 'required')}${f('roll_no', 'Examination roll no.', o.roll_no, 'text', 'required')}
+      <div class="fld ${un.has('dept') ? 'unsure' : ''}"><label for="${P}-dept">Course</label><select id="${P}-dept" required><option value="">Choose course</option>${deptOpts}</select>${o.course_text ? `<small>Written on form: ${esc(o.course_text)}</small>` : ''}</div>
+      ${f('adm_year', 'Batch from (admission year)', o.adm_year, 'number', 'min="1980" max="2100"')}${f('grad_year', 'Batch to (passing year)', o.grad_year, 'number', 'min="1980" max="2100" required')}
+      ${f('email', 'Email', o.email, 'text')}${f('mobile', 'Mobile no.', o.mobile, 'text')}</div></fieldset>`
+    : `<div class="ogrid">${f('mobile', 'Mobile no. (visible only to IQAC)', o.mobile, 'text')}</div>`}
+    <fieldset class="ofs"><legend>Internships during graduation</legend><div class="ogrid">
+      ${sel('internship_done', 'Internship done?', yn, ['Yes', 'No'])}${f('internship_count', 'Number of internships', o.internship_count, 'number', 'min="0" max="20"')}
+      <div class="fld span2 ${un.has('internship_details') ? 'unsure' : ''}"><label for="${P}-internship_details">Details (when, where, duration)</label><input id="${P}-internship_details" type="text" value="${esc(o.internship_details || '')}"></div></div></fieldset>
+    <fieldset class="ofs"><legend>Current status</legend><div class="ogrid">
+      ${sel('status', 'What are you doing now?', o.status, R.statuses)}
+      <div class="osec" data-for="study">${f('study_course', 'Higher studies: course', o.study_course)}${f('study_university', 'University', o.study_university)}</div>
+      <div class="osec" data-for="job">${f('designation', 'Job: designation', o.designation)}${f('company', 'Company / organisation', o.company)}${f('location', 'Location', o.location)}
+        ${sel('placement_type', 'Placement', o.placement_type, R.placement, 'Not recorded')}${f('package_lpa', 'Annual package (lakh per annum)', o.package_lpa, 'number', 'min="0" step="0.1"')}</div></div></fieldset>
+    <fieldset class="ofs"><legend>Competitive exams</legend><p class="small muted">Passed</p>${checks('passed', o.exams_passed)}<p class="small muted" style="margin-top:8px">Appeared</p>${checks('appeared', o.exams_appeared)}</fieldset>
+    ${opts.evidence ? `<div class="fld"><label for="o-evidence">Offer letter or admission/allotment letter (optional)</label><input id="o-evidence" type="file" accept=".pdf,.png,.jpg,.jpeg">${o.evidence_url ? `<small>Attached: <a href="${esc(o.evidence_url)}" target="_blank" rel="noopener">${esc(o.evidence_label || 'document')}</a></small>` : ''}</div>` : ''}`;
+}
+function readOutcomeForm(P = 'o') {
+  const v = id => ($(P + '-' + id)?.value ?? '').trim();
+  const out = {};
+  ['name', 'roll_no', 'dept', 'adm_year', 'grad_year', 'email', 'mobile', 'internship_done', 'internship_count', 'internship_details', 'status', 'study_course', 'study_university',
+    'designation', 'company', 'location', 'placement_type', 'package_lpa'].forEach(k => { if ($(P + '-' + k)) out[k] = v(k); });
+  if (out.package_lpa === '') out.package_lpa = null;
+  out.exams_passed = [...document.querySelectorAll(`input[name="${P}-passed"]:checked`)].map(x => x.value);
+  out.exams_appeared = [...document.querySelectorAll(`input[name="${P}-appeared"]:checked`)].map(x => x.value);
+  return out;
+}
+function toggleOutcomeSections() {
+  document.querySelectorAll('[data-ostatus]').forEach(sel => {
+    const st = sel.value, scope = sel.closest('form') || document;
+    scope.querySelectorAll('.osec').forEach(sec => {
+      const show = sec.dataset.for === 'study' ? ['Higher studies', 'Research', ''].includes(st) : ['Job', 'Govt services', 'Entrepreneurship', ''].includes(st);
+      sec.classList.toggle('dim', !show);
+    });
+  });
+}
+
+/* ---------- placements ---------- */
+const lpa = v => v === null || v === undefined ? '—' : `₹${Number(v).toLocaleString('en-IN', { maximumFractionDigits: 1 })} LPA`;
+const pc = v => `${Number(v || 0).toLocaleString('en-IN', { maximumFractionDigits: 1 })}%`;
+async function viewPlacements() {
+  const p = S.plc, qs = new URLSearchParams({ batch: p.batch, dept: p.dept });
+  const d = await api('/api/placements?' + qs), s = d.summary, staff = ['admin', 'faculty'].includes(S.me.role);
+  const typeUnknown = s.placed - s.on_campus - s.off_campus;
+  const bars = [['Placed on campus', s.on_campus], ['Placed off campus', s.off_campus], ['Placed (type not recorded)', typeUnknown], ['Higher studies & research', s.higher_studies],
+    ['Government services', s.govt], ['Entrepreneurship', s.entrepreneurship], ['Other', s.other], ['Not reported', s.not_reported]].filter(b => b[1] > 0 || b[0].startsWith('Placed on') || b[0].startsWith('Placed off'));
+  const max = Math.max(1, ...bars.map(b => b[1]));
+  const title = `${p.batch ? 'Batch of ' + p.batch : 'All batches'} · ${p.dept ? esc(deptName(p.dept)) : 'all courses'}`;
+  return `${why('placements')}
+  <div class="between" style="margin-bottom:14px"><div class="row">
+      <select data-pl="batch" aria-label="Batch" style="width:auto"><option value="">All batches</option>${d.batches.map(y => `<option value="${y}" ${String(y) === p.batch ? 'selected' : ''}>Batch of ${y}</option>`).join('')}</select>
+      <select data-pl="dept" aria-label="Course" style="width:auto"><option value="">All courses</option>${S.meta.departments.map(x => `<option value="${x.code}" ${x.code === p.dept ? 'selected' : ''}>${esc(x.course)}</option>`).join('')}</select></div>
+    ${staff ? `<a class="btn" href="/api/placements?${qs}&format=csv" download>${icon('file', 15)}Download CSV</a>` : ''}</div>
+  <div class="stack">
+    <div class="kpis k4">
+      <div class="kpi"><span>Graduates on record</span><b>${fmtN(s.graduates)}</b></div>
+      <div class="kpi"><span>Placed</span><b>${fmtN(s.placed)} <small class="muted" style="font-size:14px;font-weight:500">${pc(s.placed_pct)}</small></b></div>
+      <div class="kpi"><span>On-campus placement</span><b>${pc(s.on_campus_pct)}</b></div>
+      <div class="kpi"><span>Off-campus placement</span><b>${pc(s.off_campus_pct)}</b></div>
+      <div class="kpi"><span>Higher studies</span><b>${pc(s.higher_studies_pct)}</b></div>
+      <div class="kpi"><span>Average package</span><b>${lpa(s.avg_package)}</b></div>
+      <div class="kpi"><span>Median package</span><b>${lpa(s.median_package)}</b></div>
+      <div class="kpi"><span>Highest package</span><b>${lpa(s.highest_package)}</b></div>
+    </div>
+    <div class="grid2">
+      <section class="card"><div class="card-h"><h2>Where the batch went</h2><span class="small muted">${title}</span></div>
+        <div class="stack" style="gap:4px">${bars.map(([l, v]) => `<div class="hb" style="grid-template-columns:190px minmax(0,1fr)" title="${esc(l)}: ${v}"><span>${esc(l)}</span><div class="hb-t"><i style="width:calc((100% - 100px) * ${(v / max).toFixed(3)})"></i><span>${fmtN(v)} · ${pc(s.graduates ? v / s.graduates * 100 : 0)}</span></div></div>`).join('')}</div>
+        <p class="small muted" style="margin-top:10px">Percentages are of all graduates on record for this selection. ${fmtN(s.with_package)} placed graduates reported a package; average and median use those.</p></section>
+      <section class="card"><div class="card-h"><h2>Placement rate by year</h2><span class="small muted">${p.dept ? esc(deptName(p.dept)) : 'All courses'}</span></div>
+        ${cols(d.byYear.map(y => ({ l: "'" + String(y.year).slice(2), v: Math.round(y.placed_pct), t: `Batch of ${y.year}: ${pc(y.placed_pct)} placed, median ${lpa(y.median_package)}` })), true).replace(/<span>(\d+)<\/span>/g, '<span>$1%</span>')}</section>
+    </div>
+    <section class="card" style="padding:0"><div class="card-h" style="padding:16px 18px 0"><h2>By course</h2><span class="small muted">${p.batch ? 'Batch of ' + p.batch : 'All batches'}</span></div>
+      <div class="tw" style="border:0;border-top:1px solid var(--line);border-radius:0 0 8px 8px;margin-top:12px"><table class="t"><thead><tr><th>Course</th><th class="n">Graduates</th><th class="n">Placed</th><th class="n">On-campus</th><th class="n">Off-campus</th><th class="n">Higher studies</th><th class="n">Average</th><th class="n">Median</th><th class="n">Highest</th></tr></thead>
+      <tbody>${d.byCourse.map(c => `<tr><td>${esc(c.course)}</td><td class="n">${fmtN(c.graduates)}</td><td class="n">${pc(c.placed_pct)}</td><td class="n">${fmtN(c.on_campus)}</td><td class="n">${fmtN(c.off_campus)}</td><td class="n">${pc(c.higher_studies_pct)}</td><td class="n">${lpa(c.avg_package)}</td><td class="n">${lpa(c.median_package)}</td><td class="n">${lpa(c.highest_package)}</td></tr>`).join('') || '<tr><td colspan="9" class="muted">No records.</td></tr>'}</tbody></table></div></section>
+    <section class="card" style="padding:0"><div class="card-h" style="padding:16px 18px 0"><h2>Year by year</h2></div>
+      <div class="tw" style="border:0;border-top:1px solid var(--line);border-radius:0 0 8px 8px;margin-top:12px"><table class="t"><thead><tr><th>Batch</th><th class="n">Graduates</th><th class="n">Placed</th><th class="n">On-campus</th><th class="n">Off-campus</th><th class="n">Higher studies</th><th class="n">Other / not reported</th><th class="n">Average</th><th class="n">Median</th></tr></thead>
+      <tbody>${d.byYear.slice().reverse().map(y => `<tr><td>${y.year}</td><td class="n">${fmtN(y.graduates)}</td><td class="n">${pc(y.placed_pct)}</td><td class="n">${pc(y.on_campus_pct)}</td><td class="n">${pc(y.off_campus_pct)}</td><td class="n">${pc(y.higher_studies_pct)}</td><td class="n">${pc(y.other_pct + y.not_reported_pct + y.govt_pct + y.entrepreneurship_pct)}</td><td class="n">${lpa(y.avg_package)}</td><td class="n">${lpa(y.median_package)}</td></tr>`).join('')}</tbody></table></div></section>
+    <section class="card" style="padding:0"><div class="card-h" style="padding:16px 18px 0"><h2>Recruiters</h2><span class="small muted">${fmtN(s.companies)} companies · ${title}</span></div>
+      <div class="tw" style="border:0;border-top:1px solid var(--line);border-radius:0 0 8px 8px;margin-top:12px"><table class="t"><thead><tr><th>Company</th><th class="n">Graduates hired</th><th class="n">On-campus</th><th class="n">Average package</th><th class="n">Highest</th></tr></thead>
+      <tbody>${d.companies.map(c => `<tr><td>${esc(c.company)}</td><td class="n">${fmtN(c.hires)}</td><td class="n">${fmtN(c.on_campus)}</td><td class="n">${lpa(c.avg_package)}</td><td class="n">${lpa(c.highest_package)}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">No placements recorded.</td></tr>'}</tbody></table></div></section>
+    ${staff ? `<section class="card" style="padding:0"><div class="between" style="padding:16px 18px 0"><h2 style="font-size:14.5px">Graduates</h2><input type="search" data-pls placeholder="Search name, company, roll no." style="width:min(280px,100%)" aria-label="Search graduates"></div>
+      <div class="tw" style="border:0;border-top:1px solid var(--line);border-radius:0 0 8px 8px;margin-top:12px;max-height:520px;overflow:auto"><table class="t"><thead><tr><th>Name</th><th>Roll no.</th><th>Course</th><th>Batch</th><th>Outcome</th><th>Where</th><th class="n">Package</th><th>Form</th></tr></thead>
+      <tbody>${d.students.map(r => `<tr data-plrow="${esc((r.name + ' ' + r.roll + ' ' + r.company + ' ' + r.study).toLowerCase())}"><td><button class="link" data-go="#/u/${r.id}">${esc(r.name)}</button></td><td class="mono">${esc(r.roll)}</td><td>${esc(r.course)}</td><td>${r.batch}</td>
+        <td>${esc(r.status)}${r.placement_type ? ` <span class="chip">${esc(r.placement_type)}</span>` : ''}</td><td>${esc(r.status === 'Job' || r.status === 'Govt services' || r.status === 'Entrepreneurship' ? [r.designation, r.company, r.location].filter(Boolean).join(', ') : r.study)}</td>
+        <td class="n">${r.package_lpa ? lpa(r.package_lpa) : '—'}</td><td>${r.verified ? '<span class="small">Verified</span>' : '<span class="small muted">Self-reported</span>'}</td></tr>`).join('')}</tbody></table></div></section>`
+      : `<p class="small muted">Individual records are visible to faculty and IQAC only.</p>`}
+  </div>`;
+}
+
+/* ---------- digitize (IQAC) ---------- */
+async function viewDigitize() {
+  return `${why('digitize')}<div class="grid3">
+    <section class="card"><div class="card-h"><h2>1. Scan paper forms</h2></div>
+      <p class="small muted">Photograph or scan each form (one form per file: JPG, PNG or PDF). Upload a whole bundle at once.</p>
+      <div class="stack" style="gap:10px;margin-top:12px"><div class="fld"><label for="dg-batch">Bundle name (optional)</label><input id="dg-batch" type="text" placeholder="For example: Mathematics 2018, box 3"></div>
+        <input id="dg-files" type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.webp" aria-label="Scanned forms">
+        <button class="btn btn-p" data-act="upload">${icon('upload', 15)}Upload scans</button><p class="small muted" id="dg-progress" aria-live="polite"></p></div></section>
+    <section class="card"><div class="card-h"><h2>2. Or type in a form</h2></div>
+      <p class="small muted">For forms that are faster to type than to scan. The screen follows the paper form line by line.</p>
+      <button class="btn" style="margin-top:12px" data-act="paper">${icon('plus', 15)}Type in a paper form</button></section>
+    <section class="card"><div class="card-h"><h2>3. Or import a spreadsheet</h2></div>
+      <p class="small muted">If any batch is already in Excel, save it as CSV using the template’s column headings. Up to 5,000 rows per file.</p>
+      <div class="stack" style="gap:10px;margin-top:12px"><a class="btn" href="/api/admin/import/template" download>${icon('file', 15)}Download template</a>
+        <input id="dg-csv" type="file" accept=".csv,text/csv" aria-label="CSV file"><button class="btn btn-p" data-act="importcsv">Import</button><div id="dg-import" aria-live="polite"></div></div></section>
+  </div>
+  <div id="dg-review" style="margin-top:16px">${await digitizeReview()}</div>`;
+}
+async function refreshDigitize(full) { const el = $('dg-review'); if (el) el.innerHTML = await digitizeReview(); else if (full) rerender(); }
+async function digitizeReview() {
+  const st = S.dig.filter, r = await api('/api/admin/scans' + (st ? '?status=' + st : ''));
+  const c = r.counts, label = { queued: 'Waiting to be read', reading: 'Being read', ready: 'Ready to check', failed: 'Couldn’t read', approved: 'Saved', discarded: 'Discarded' };
+  if (!S.dig.sel && r.rows.length) S.dig.sel = (r.rows.find(x => x.status === 'ready') || r.rows[0]).id;
+  let detail = `<div class="empty">${icon('file', 30)}<p>Upload scans to start. Each one appears here to check before it is saved.</p></div>`;
+  if (S.dig.sel && r.rows.some(x => x.id === S.dig.sel)) {
+    const d = await api('/api/admin/scans/' + S.dig.sel), sc = d.scan, x = sc.extracted || {};
+    const view = sc.mime === 'application/pdf' ? `<iframe src="${sc.file_url}" title="Scanned form" class="scanview"></iframe>` : `<a href="${sc.file_url}" target="_blank" rel="noopener" title="Open full size"><img src="${sc.file_url}" alt="Scanned form ${esc(sc.file_name)}" class="scanview"></a>`;
+    detail = `<div class="pane-h"><button class="btn btn-g btn-sm back" data-act="dsel" data-id="">${icon('back', 16)}</button><div><b>${esc(sc.file_name)}</b><p class="small muted">${esc(sc.batch_label || 'No bundle name')} · ${label[sc.status]}</p></div></div>
+      <div class="review"><div class="scanbox">${view}</div>
+      <form class="detail" onsubmit="return false">
+        ${sc.status === 'failed' ? `<p class="err">${esc(sc.error || 'Couldn’t read this file.')}</p>` : ''}
+        ${sc.status === 'queued' || sc.status === 'reading' ? `<p class="small muted">This scan is waiting for the AI to read it. You can also fill it in by hand below.</p>` : ''}
+        ${sc.status === 'ready' && !r.ai && !sc.extracted ? `<p class="small muted">AI reading is off on this server, so fill the fields from the scan.</p>` : ''}
+        ${x.is_alumni_form === false ? `<p class="err">This doesn’t look like an alumni form.</p>` : ''}
+        ${d.existing ? `<p class="small" style="color:var(--warn)">Roll number already on record: <b>${esc(d.existing.name)}</b>. Saving updates that record.</p>` : ''}
+        ${x.uncertain?.length ? `<p class="small" style="color:var(--warn)">${x.uncertain.length} field${x.uncertain.length > 1 ? 's were' : ' was'} hard to read and ${x.uncertain.length > 1 ? 'are' : 'is'} marked below.</p>` : ''}
+        ${outcomeForm(x, { identity: true, uncertain: x.uncertain || [] })}
+        <p class="err" id="d-err" hidden></p>
+        <div class="row">${sc.status === 'approved' || sc.status === 'discarded' ? '' : `<button class="btn btn-p" data-act="ddo" data-k="approve">${icon('check', 15)}Save to register</button>`}
+          ${sc.status === 'failed' ? `<button class="btn" data-act="ddo" data-k="retry">Read again</button>` : ''}${sc.status === 'approved' || sc.status === 'discarded' ? '' : `<button class="btn btn-g" data-act="ddo" data-k="discard">Discard</button>`}</div>
+      </form></div>`;
+  }
+  return `<section class="card" style="padding:0"><div class="between" style="padding:14px 16px"><div class="row">${['', 'queued', 'ready', 'failed', 'approved'].map(k => `<button class="chip fchip" data-act="dfilter" data-k="${k}" aria-pressed="${st === k}">${k ? label[k] : 'To do'} ${k ? `<b>${c[k] || 0}</b>` : `<b>${(c.queued || 0) + (c.reading || 0) + (c.ready || 0) + (c.failed || 0)}</b>`}</button>`).join('')}</div>
+      <span class="small muted">AI reading: ${r.ai ? 'on' : 'off (add ANTHROPIC_API_KEY on the server)'}</span></div>
+    <div class="two dig" data-open="${S.dig.sel ? 1 : 0}" style="border:0;border-top:1px solid var(--line);border-radius:0">
+      <div class="list">${r.rows.map(x => `<button class="li" data-act="dsel" data-id="${x.id}" aria-current="${x.id === S.dig.sel}"><span class="ico-c">${icon('file', 15)}</span><div><b>${esc(x.name || x.file_name)}<small>${label[x.status]}</small></b>
+        <p>${esc(x.roll_no || x.batch_label || x.file_name)}${x.uncertain ? ` · ${x.uncertain} to check` : ''}</p></div></button>`).join('') || '<div class="empty"><p>Nothing here.</p></div>'}</div>
+      <div class="pane">${detail}</div></div></section>`;
 }
 
 /* ---------- modals ---------- */
@@ -627,6 +783,7 @@ function renderModal() {
       <p class="small">About ${esc(m.name)}</p>
       <div class="fld"><label for="r-why">Reason</label><select id="r-why"><option>An achievement looks wrong</option><option>Wrong batch or department</option><option>Fake profile</option><option>Inappropriate messages</option><option>Something else</option></select></div>
       <div class="fld"><label for="r-txt">Details</label><textarea id="r-txt" required maxlength="600"></textarea></div><p class="small muted">IQAC reviews every report. The person isn’t told who reported it.</p><p class="err" id="m-err" hidden></p></div>${foot('Send to IQAC')}</form>`;
+  if (m.type === 'paper' || m.type === 'editform') root.dataset.wide = '1'; else delete root.dataset.wide;
   if (m.type === 'banner') h = `<form data-form="banner">${head('Profile banner')}<div class="mb">
       <div class="fld"><span class="small" style="font-weight:500">Pick a colour</span><div class="banners">${BANNERS.map(b => `<button type="button" class="bn-${b}" data-act="pickbanner" data-k="${b}" aria-pressed="${!S.me.banner_url && S.me.banner_preset === b}" aria-label="${b}"></button>`).join('')}</div></div>
       <div class="divider">or</div>
@@ -636,10 +793,19 @@ function renderModal() {
       <div class="row" style="gap:14px">${av(S.me, 'av-lg')}<p class="small muted">A clear photo of your face helps people recognise you. Square images work best.</p></div>
       <div class="fld"><label for="ph-file">Choose a photo</label><input id="ph-file" type="file" accept=".png,.jpg,.jpeg,.webp" required><small>PNG, JPG or WebP, under 4 MB.</small></div>
       <p class="err" id="m-err" hidden></p></div>${foot('Save photo')}</form>`;
+  if (m.type === 'editform') h = `<form data-form="editform">${head('Alumni form · ' + esc(m.user.name))}<div class="mb">
+      <p class="small muted">Roll number <span class="mono">${esc(m.user.college_id)}</span> · ${esc(meta(m.user))}${m.outcome?.evidence_url ? ` · <a href="${esc(m.outcome.evidence_url)}" target="_blank" rel="noopener">View attached document</a>` : ''}</p>
+      ${outcomeForm(m.outcome || {}, { prefix: 'm' })}<p class="small muted">Saving marks this form as verified by IQAC.</p><p class="err" id="m-err" hidden></p></div>${foot('Save and verify')}</form>`;
+  if (m.type === 'paper') h = `<form data-form="paper">${head('Type in a paper form')}<div class="mb">
+      <p class="small muted">Copy the form line by line. A photo or scan of the paper is optional but recommended as proof.</p>
+      ${outcomeForm({}, { identity: true, prefix: 'm' })}
+      <div class="fld"><label for="pp-scan">Photo or scan of the form</label><input id="pp-scan" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp"></div>
+      <p class="err" id="m-err" hidden></p></div>${foot('Save record')}</form>`;
   if (m.type === 'resubmit') h = `<form data-form="resubmit">${head('Reply and resend')}<div class="mb">
       <div class="fld"><label for="rs-d">Add the details the verifier asked for</label><textarea id="rs-d" required maxlength="600"></textarea></div><p class="err" id="m-err" hidden></p></div>${foot('Resend for verification')}</form>`;
   root.innerHTML = `<div class="ovl" data-act="close-bg"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt">${h}</div></div>`;
   const f = root.querySelector('textarea, input, select'); if (f) f.focus();
+  toggleOutcomeSections();
 }
 function modalError(e) { const el = $('m-err'); if (el) { el.textContent = e.message; el.hidden = false; } else toast(e.message); }
 const readFile = file => new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1]); r.onerror = no; r.readAsDataURL(file); });
@@ -662,6 +828,36 @@ const ACT = {
   photo() { openModal({ type: 'photo' }); },
   pickbanner(el) { S.modal.preset = el.dataset.k; document.querySelectorAll('[data-act=pickbanner]').forEach(b => b.setAttribute('aria-pressed', b === el)); },
   async rmphoto() { try { const r = await api('/api/me/image', { body: { kind: 'avatar', remove: true } }); S.me = r.user; toast('Photo removed'); rerender(); } catch (e) { toast(e.message); } },
+  async editform(el) { try { const r = await api('/api/admin/outcome/' + el.dataset.id); openModal({ type: 'editform', id: Number(el.dataset.id), user: r.user, outcome: r.outcome }); } catch (e) { toast(e.message); } },
+  paper() { openModal({ type: 'paper' }); },
+  async dsel(el) { S.dig.sel = el.dataset.id ? Number(el.dataset.id) : null; await refreshDigitize(); toggleOutcomeSections(); },
+  async dfilter(el) { S.dig.filter = el.dataset.k; S.dig.sel = null; await refreshDigitize(); toggleOutcomeSections(); },
+  async ddo(el) {
+    const id = S.dig.sel, act = el.dataset.k;
+    try {
+      if (act === 'approve') { await api(`/api/admin/scans/${id}/approve`, { body: { ...readOutcomeForm(), overwrite: !!el.dataset.overwrite } }); toast('Saved to the alumni register'); }
+      else { await api(`/api/admin/scans/${id}/${act}`, { body: {} }); toast(act === 'discard' ? 'Scan discarded' : 'Sent for reading again'); }
+      S.dig.sel = null; await refreshDigitize(true); toggleOutcomeSections();
+    } catch (e) { const er = $('d-err'); if (er) { er.textContent = e.message; er.hidden = false; } else toast(e.message); }
+  },
+  async upload() {
+    const files = [...($('dg-files')?.files || [])]; if (!files.length) { toast('Choose the scanned files first.'); return; }
+    const out = $('dg-progress'), batch = ($('dg-batch')?.value || '').trim(); let done = 0, failed = 0;
+    for (const f of files) {
+      out.textContent = `Uploading ${done + failed + 1} of ${files.length}…`;
+      try { await api('/api/admin/scans', { body: { name: f.name, batch, data: await readFile(f) } }); done++; } catch (e) { failed++; }
+    }
+    out.textContent = `Uploaded ${done} of ${files.length}${failed ? `, ${failed} failed (check the file type and size)` : ''}.`;
+    $('dg-files').value = ''; await refreshDigitize(true);
+  },
+  async importcsv() {
+    const f = $('dg-csv')?.files[0]; if (!f) { toast('Choose a CSV file first.'); return; }
+    const out = $('dg-import');
+    try { out.innerHTML = 'Importing…'; const r = await api('/api/admin/import', { body: { csv: await f.text() } });
+      out.innerHTML = `<p class="small"><b>${r.created}</b> new records, <b>${r.updated}</b> updated${r.errors.length ? `, <b style="color:var(--bad)">${r.errors.length}</b> rows need fixing:` : '.'}</p>
+        ${r.errors.length ? `<div class="tw" style="max-height:180px;overflow:auto;margin-top:6px"><table class="t"><tbody>${r.errors.slice(0, 100).map(e => `<tr><td class="n">Row ${e.row}</td><td>${esc(e.name)}</td><td>${esc(e.errors.join('; '))}</td></tr>`).join('')}</tbody></table></div>` : ''}`;
+    } catch (e) { out.innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+  },
   close: closeModal,
   'close-bg'(el, e) { if (e.target === el) closeModal(); },
   copy(el) { const t = el.dataset.t; (navigator.clipboard?.writeText(t) || Promise.reject()).then(() => toast('Profile link copied'), () => toast(t)); },
@@ -695,11 +891,14 @@ let typeT;
 document.addEventListener('input', e => {
   const el = e.target;
   if (el.dataset.p && el.type !== 'checkbox' && el.tagName !== 'SELECT') { S.people[el.dataset.p] = el.value; S.people.limit = 24; clearTimeout(typeT); typeT = setTimeout(async () => { $('presults').innerHTML = await peopleResults(); }, 250); }
+  if (el.dataset.pls !== undefined) { S.plc.q = el.value.toLowerCase(); document.querySelectorAll('[data-plrow]').forEach(r => { r.hidden = S.plc.q && !r.dataset.plrow.includes(S.plc.q); }); }
   if (el.dataset.a === 'rq') { S.adm.rq = el.value; S.adm.rpage = 0; clearTimeout(typeT); typeT = setTimeout(async () => { $('aregion').innerHTML = await adminRegion(); const i = $('a-rq'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 300); }
 });
 document.addEventListener('change', async e => {
   const el = e.target;
   if (el.dataset.p && (el.type === 'checkbox' || el.tagName === 'SELECT')) { S.people[el.dataset.p] = el.type === 'checkbox' ? el.checked : el.value; S.people.limit = 24; $('presults').innerHTML = await peopleResults(); }
+  if (el.dataset.pl) { S.plc[el.dataset.pl] = el.value; rerender(); return; }
+  if (el.dataset.ostatus !== undefined) toggleOutcomeSections();
   if (el.dataset.a && el.tagName === 'SELECT') { S.adm[el.dataset.a] = el.value; S.adm.rpage = 0; $('aregion').innerHTML = await adminRegion(); }
 });
 document.addEventListener('keydown', e => {
@@ -712,7 +911,7 @@ document.addEventListener('submit', async e => {
   const btn = f.querySelector('button[type=submit]'); if (btn) btn.disabled = true;
   try {
     if (kind === 'login') {
-      try { const r = await api('/api/auth/login', { body: { email: v('l-email'), password: $('l-pass').value } }); S.me = r.user; const me = await api('/api/me'); S.counts = me.counts; location.hash = home(); render(); }
+      try { const r = await api('/api/auth/login', { body: { email: v('l-email'), password: $('l-pass').value } }); S.me = r.user; const me = await api('/api/me'); S.counts = me.counts; S.rmeta = await api('/api/records/meta'); location.hash = home(); render(); }
       catch (err) { $('l-err').textContent = err.message; $('l-err').hidden = false; }
     } else if (kind === 'register') {
       try { const r = await api('/api/auth/register', { body: { role: v('r-role'), name: v('r-name'), email: v('r-email'), password: $('r-pass').value, dept: v('r-dept'), adm_year: v('r-adm'), grad_year: v('r-grad'), college_id: v('r-cid') } });
@@ -743,6 +942,15 @@ document.addEventListener('submit', async e => {
         else throw new Error(kind === 'banner' ? 'Pick a colour or upload an image.' : 'Choose a photo first.');
         const r = await api('/api/me/image', { body }); S.me = r.user; closeModal(); toast(kind === 'banner' ? 'Banner updated' : 'Photo updated'); rerender();
       } catch (err) { modalError(err); }
+    } else if (kind === 'myoutcome') {
+      const body = readOutcomeForm(), file = $('o-evidence')?.files[0];
+      if (file) body.evidence = { name: file.name, data: await readFile(file) };
+      const r = await api('/api/me/outcome', { method: 'PUT', body }); S.me = r.user; toast('Alumni form saved'); rerender();
+    } else if (kind === 'editform') {
+      try { await api('/api/admin/outcome/' + S.modal.id, { method: 'PUT', body: readOutcomeForm('m') }); closeModal(); toast('Form saved and verified'); $('aregion') && ($('aregion').innerHTML = await adminRegion()); } catch (err) { modalError(err); }
+    } else if (kind === 'paper') {
+      try { const body = readOutcomeForm('m'), file = $('pp-scan').files[0]; if (file) body.scan = { name: file.name, data: await readFile(file) };
+        const r = await api('/api/admin/paper', { body }); closeModal(); toast(r.created ? 'New record saved' : 'Existing record updated'); } catch (err) { modalError(err); }
     } else if (kind === 'resubmit') {
       try { await api(`/api/milestones/${S.modal.id}/resubmit`, { body: { description: v('rs-d') } }); closeModal(); toast('Sent for verification again'); rerender(); } catch (err) { modalError(err); }
     } else if (kind === 'profile') {

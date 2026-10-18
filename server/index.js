@@ -13,7 +13,7 @@ const PORT = Number(process.env.PORT) || 3000;
 const LEVELS = ['College', 'University', 'State', 'National', 'International'];
 const KINDS = ['achievement', 'exam', 'research', 'society', 'position', 'event', 'project', 'internship', 'graduation', 'study', 'phd', 'job', 'startup'];
 const ACH = ['achievement', 'exam', 'research'];
-const STATUSES = ['Job', 'Higher studies', 'Research', 'Govt services', 'Entrepreneurship', 'Not reported'];
+const STATUSES = ['Job', 'Higher studies', 'Research', 'Govt services', 'Entrepreneurship', 'Other', 'Not reported'];
 const STATUS_KIND = { 'Job': 'job', 'Higher studies': 'study', 'Research': 'phd', 'Govt services': 'job', 'Entrepreneurship': 'startup' };
 const PURPOSES = ['Mentorship', 'Career advice', 'Resume review', 'Internship / referral', 'Higher studies advice', 'Project collaboration'];
 const FILE_TYPES = { pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg' };
@@ -129,7 +129,7 @@ const vcountSql = `(SELECT count(*) FROM milestones x WHERE x.user_id = u.id AND
 app.get('/api/meta', (req, res) => res.json({ departments: q.all('SELECT * FROM departments ORDER BY name'), levels: LEVELS, statuses: STATUSES, purposes: PURPOSES }));
 app.get('/api/stats/public', (req, res) => {
   res.json(q.get(`SELECT
-    (SELECT count(*) FROM users WHERE role = 'alumni' AND account = 'active') alumni,
+    (SELECT count(*) FROM users WHERE role = 'alumni' AND account IN ('active','unclaimed')) alumni,
     (SELECT count(*) FROM milestones WHERE status = 'verified' AND kind IN ('achievement','exam','research')) verified,
     (SELECT count(*) FROM users WHERE account = 'active' AND last_seen >= datetime('now','-90 days')) active,
     (SELECT count(*) FROM users WHERE role = 'alumni' AND mentor = 1 AND account = 'active') mentors`));
@@ -159,6 +159,12 @@ app.post('/api/auth/register', (req, res) => {
   if (!(adm >= 1990 && adm <= new Date().getFullYear())) return fail(res, 400, 'Enter your admission year.');
   if (role === 'alumni' && !(grad > adm && grad <= new Date().getFullYear())) return fail(res, 400, 'Enter your graduation year.');
   if (!cid) return fail(res, 400, 'Enter your college roll number.');
+  const paper = q.get(`SELECT * FROM users WHERE college_id = ? AND account = 'unclaimed'`, cid);
+  if (paper) {
+    if (q.get('SELECT 1 FROM users WHERE email = ? AND id != ?', email, paper.id)) return fail(res, 409, 'An account with this email already exists.');
+    q.run(`UPDATE users SET email = ?, pass = ?, account = 'pending', accepts = 1 WHERE id = ?`, email, hashPassword(b.password), paper.id);
+    return res.json({ ok: true, message: 'We found your record from the college register. IQAC will confirm it’s you, then you can log in.' });
+  }
   if (q.get('SELECT 1 FROM users WHERE email = ? OR college_id = ?', email, cid)) return fail(res, 409, 'An account with this email or roll number already exists.');
   q.run(`INSERT INTO users (email, pass, role, name, dept, adm_year, grad_year, college_id, headline, account) VALUES (?,?,?,?,?,?,?,?,?, 'pending')`,
     email, hashPassword(b.password), role, name, b.dept, adm, grad, cid, `${DEPTS()[b.dept].course}${grad ? ', class of ' + grad : ' student'}`);
@@ -303,14 +309,16 @@ app.get('/api/people', auth(), (req, res) => {
   res.json({ total, people });
 });
 app.get('/api/people/:id', auth(), (req, res) => {
-  const u = q.get(`SELECT * FROM users WHERE id = ? AND account = 'active'`, Number(req.params.id));
+  const staffView = ['admin', 'faculty'].includes(req.user.role);
+  const u = q.get(`SELECT * FROM users WHERE id = ? AND (account = 'active' OR (? AND account = 'unclaimed'))`, Number(req.params.id), staffView ? 1 : 0);
   if (!u) return fail(res, 404, 'Profile not found.');
   const ms = q.all('SELECT * FROM milestones WHERE user_id = ?', u.id);
   const similar = q.all(`SELECT u.* FROM users u WHERE u.account = 'active' AND u.role IN ('student','alumni') AND u.id NOT IN (?, ?) AND (u.dept = ? OR (u.status IS NOT NULL AND u.status = ?))
     ORDER BY (u.about != '') DESC, ${vcountSql} DESC LIMIT 3`, u.id, req.user.id, u.dept, u.status).map(x => publicUser(x, req.user));
   res.json({
     user: publicUser(u, req.user), milestones: milestonesFor(u.id, req.user),
-    relation: u.id === req.user.id ? { kind: 'self' } : relation(req.user.id, u.id),
+    relation: u.id === req.user.id ? { kind: 'self' } : u.account === 'unclaimed' ? { kind: 'none' } : relation(req.user.id, u.id),
+    unclaimed: u.account === 'unclaimed',
     strength: u.id === req.user.id ? strength(u, ms) : null, similar
   });
 });
@@ -530,19 +538,19 @@ app.get('/api/admin/overview', auth('admin'), (req, res) => {
   const d = req.query.dept && DEPTS()[req.query.dept] ? req.query.dept : null;
   const df = d ? 'AND u.dept = ?' : '', dp = d ? [d] : [];
   const k = q.get(`SELECT
-    (SELECT count(*) FROM users u WHERE role = 'alumni' AND account = 'active' ${df}) alumni,
+    (SELECT count(*) FROM users u WHERE role = 'alumni' AND account IN ('active','unclaimed') ${df}) alumni,
     (SELECT count(*) FROM users u WHERE role = 'student' AND account = 'active' ${df}) students,
     (SELECT count(*) FROM milestones m JOIN users u ON u.id = m.user_id WHERE m.status = 'verified' AND m.kind IN ('achievement','exam','research') ${df}) verified,
     (SELECT count(*) FROM milestones m JOIN users u ON u.id = m.user_id WHERE m.status IN ('pending','info') ${df}) pending,
     (SELECT count(*) FROM users u WHERE role = 'alumni' AND mentor = 1 AND account = 'active' ${df}) mentors,
-    (SELECT count(*) FROM users u WHERE role = 'alumni' AND account = 'active' AND (status_updated IS NULL OR status_updated < date('now','-2 years')) ${df}) stale,
+    (SELECT count(*) FROM users u WHERE role = 'alumni' AND account IN ('active','unclaimed') AND (status_updated IS NULL OR status_updated < date('now','-2 years')) ${df}) stale,
     (SELECT count(*) FROM users WHERE account = 'pending') registrations,
     (SELECT count(*) FROM chat_requests r JOIN users u ON u.id = r.to_id WHERE 1 ${df}) requests,
     (SELECT count(*) FROM chat_requests r JOIN users u ON u.id = r.to_id WHERE r.status = 'accepted' ${df}) accepted`, ...dp, ...dp, ...dp, ...dp, ...dp, ...dp, ...dp, ...dp);
   k.departments = d ? 1 : q.get('SELECT count(*) n FROM departments').n;
   const byLevel = LEVELS.map(l => ({ label: l, value: q.get(`SELECT count(*) n FROM milestones m JOIN users u ON u.id = m.user_id WHERE m.status = 'verified' AND m.kind IN ('achievement','exam','research') AND m.level = ? ${df}`, l, ...dp).n }));
-  const outcomes = STATUSES.map(s => ({ label: s, value: q.get(`SELECT count(*) n FROM users u WHERE role = 'alumni' AND account = 'active' AND coalesce(status,'Not reported') = ? ${df}`, s, ...dp).n }));
-  const byYear = q.all(`SELECT grad_year label, count(*) value FROM users u WHERE role = 'alumni' AND account = 'active' ${df} GROUP BY grad_year ORDER BY grad_year`, ...dp);
+  const outcomes = STATUSES.map(s => ({ label: s, value: q.get(`SELECT count(*) n FROM users u WHERE role = 'alumni' AND account IN ('active','unclaimed') AND coalesce(status,'Not reported') = ? ${df}`, s, ...dp).n }));
+  const byYear = q.all(`SELECT grad_year label, count(*) value FROM users u WHERE role = 'alumni' AND account IN ('active','unclaimed') ${df} GROUP BY grad_year ORDER BY grad_year`, ...dp);
   const byDept = q.all(`SELECT d.name label, count(m.id) value FROM departments d LEFT JOIN users u ON u.dept = d.code LEFT JOIN milestones m ON m.user_id = u.id AND m.status = 'verified' AND m.kind IN ('achievement','exam','research') GROUP BY d.code ORDER BY value DESC`);
   res.json({ kpis: k, byLevel, outcomes, byYear, byDept });
 });
@@ -555,7 +563,8 @@ app.get('/api/admin/records', auth('admin'), (req, res) => {
   if (t) { where.push('(u.name LIKE ? OR u.college_id LIKE ? OR u.email LIKE ?)'); p.push(`%${t}%`, `%${t}%`, `%${t}%`); }
   const page = Math.max(Number(req.query.page) || 0, 0);
   const total = q.get(`SELECT count(*) n FROM users u WHERE ${where.join(' AND ')}`, ...p).n;
-  const rows = q.all(`SELECT u.id, u.college_id, u.name, u.email, u.role, u.dept, u.adm_year, u.grad_year, u.status, u.now_title, u.status_updated, u.account, ${vcountSql} verified
+  const rows = q.all(`SELECT u.id, u.college_id, u.name, u.email, u.role, u.dept, u.adm_year, u.grad_year, u.status, u.now_title, u.status_updated, u.account, ${vcountSql} verified,
+      (SELECT source FROM outcomes o WHERE o.user_id = u.id) form_source, (SELECT verified_at FROM outcomes o WHERE o.user_id = u.id) form_verified
     FROM users u WHERE ${where.join(' AND ')} ORDER BY u.id DESC LIMIT 25 OFFSET ?`, ...p, page * 25);
   res.json({ total, page, rows });
 });
@@ -563,7 +572,7 @@ const REPORTS = {
   progression: { label: 'NAAC · Student progression', year: 'batch', run(y, d) {
     const head = ['Name', 'Roll number', 'Department', 'Outcome', 'Details'];
     const rows = q.all(`SELECT u.name, u.college_id, dp.name dept, coalesce(u.status,'Not reported') status, coalesce(u.now_title,'') now FROM users u JOIN departments dp ON dp.code = u.dept
-      WHERE u.role = 'alumni' AND u.account = 'active' AND u.grad_year = ? ${d ? 'AND u.dept = ?' : ''} ORDER BY dp.name, u.name`, y, ...(d ? [d] : [])).map(r => [r.name, r.college_id, r.dept, r.status, r.now]);
+      WHERE u.role = 'alumni' AND u.account IN ('active','unclaimed') AND u.grad_year = ? ${d ? 'AND u.dept = ?' : ''} ORDER BY dp.name, u.name`, y, ...(d ? [d] : [])).map(r => [r.name, r.college_id, r.dept, r.status, r.now]);
     return { head, rows, summary: STATUSES.map(s => [s, rows.filter(r => r[3] === s).length]) };
   } },
   awards: { label: 'NAAC · Awards and medals', year: 'ay', run(y, d) {
@@ -578,13 +587,13 @@ const REPORTS = {
   nirf: { label: 'NIRF · Graduation outcomes', year: 'batch', run(y, d) {
     const head = ['Department', 'Graduates', 'Placed', 'Higher studies', 'Placed %', 'Higher studies %'];
     const rows = q.all(`SELECT dp.name, count(u.id) g, sum(u.status = 'Job') pl, sum(u.status IN ('Higher studies','Research')) hs FROM departments dp
-      LEFT JOIN users u ON u.dept = dp.code AND u.role = 'alumni' AND u.account = 'active' AND u.grad_year = ? ${d ? 'WHERE dp.code = ?' : ''} GROUP BY dp.code ORDER BY dp.name`, y, ...(d ? [d] : []))
+      LEFT JOIN users u ON u.dept = dp.code AND u.role = 'alumni' AND u.account IN ('active','unclaimed') AND u.grad_year = ? ${d ? 'WHERE dp.code = ?' : ''} GROUP BY dp.code ORDER BY dp.name`, y, ...(d ? [d] : []))
       .map(r => [r.name, r.g, r.pl || 0, r.hs || 0, r.g ? Math.round((r.pl || 0) / r.g * 100) + '%' : '—', r.g ? Math.round((r.hs || 0) / r.g * 100) + '%' : '—']);
     return { head, rows, summary: [['Graduates', rows.reduce((n, r) => n + r[1], 0)], ['Placed', rows.reduce((n, r) => n + r[2], 0)], ['Higher studies', rows.reduce((n, r) => n + r[3], 0)]] };
   } },
   engagement: { label: 'NAAC · Alumni engagement', year: 'none', run(y, d) {
     const head = ['Department', 'Alumni on record', 'Open to mentoring', 'Chat requests received', 'Accepted'];
-    const rows = q.all(`SELECT dp.name, (SELECT count(*) FROM users u WHERE u.dept = dp.code AND u.role = 'alumni' AND u.account = 'active') al,
+    const rows = q.all(`SELECT dp.name, (SELECT count(*) FROM users u WHERE u.dept = dp.code AND u.role = 'alumni' AND u.account IN ('active','unclaimed')) al,
       (SELECT count(*) FROM users u WHERE u.dept = dp.code AND u.role = 'alumni' AND u.mentor = 1) me,
       (SELECT count(*) FROM chat_requests r JOIN users u ON u.id = r.to_id WHERE u.dept = dp.code AND u.role = 'alumni') rq,
       (SELECT count(*) FROM chat_requests r JOIN users u ON u.id = r.to_id WHERE u.dept = dp.code AND u.role = 'alumni' AND r.status = 'accepted') ac
@@ -614,6 +623,9 @@ app.post('/api/admin/remind', auth('admin'), (req, res) => {
 app.get('/api/admin/audit', auth('admin'), (req, res) => {
   res.json({ rows: q.all(`SELECT a.created_at, a.action, a.target, u.name actor FROM audit_log a LEFT JOIN users u ON u.id = a.actor_id ORDER BY a.id DESC LIMIT 100`) });
 });
+
+/* ---------- alumni forms, digitisation, placements ---------- */
+require('./records')(app, { auth, fail, audit, publicUser });
 
 /* ---------- frontend ---------- */
 app.use('/api', (req, res) => fail(res, 404, 'Unknown API route.'));
