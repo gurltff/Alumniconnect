@@ -152,6 +152,7 @@ async function render() {
   if (S.me && ['login', 'register', ''].includes(r.name)) { location.hash = home(); return; }
   if (!S.me) { $('app').innerHTML = r.name === 'register' ? viewRegister() : await viewLogin(); return; }
   const views = { placements: viewPlacements, digitize: viewDigitize, dashboard: viewDash, u: viewProfile, people: viewPeople, messages: viewMessages, verify: viewVerify, admin: viewAdmin, fame: viewFame, settings: viewSettings };
+  if (r.name === 'messages' && S.me.role === 'admin') { location.hash = '#/admin'; return; }
   const v = views[r.name] || viewDash;
   $('app').innerHTML = shell(r, `<div class="empty">Loading…</div>`);
   try { $('view').innerHTML = await v(r.id); } catch (e) { $('view').innerHTML = `<div class="card empty">${icon('info', 28)}<p>${esc(e.message)}</p></div>`; }
@@ -176,14 +177,16 @@ function navItems() {
   if (r === 'admin') items.push(['admin', 'Dashboard', 'chart']);
   if (r === 'admin' || r === 'faculty') items.push(['verify', 'Verify', 'shield', c.queue]);
   if (r === 'admin') items.push(['digitize', 'Digitize records', 'upload']);
-  items.push(['placements', 'Placements', 'case'], ['people', 'People', 'users'], ['messages', 'Messages', 'message', (c.requests || 0) + (c.unread || 0)], ['fame', 'Wall of Fame', 'trophy'], ['settings', 'Settings', 'gear']);
+  items.push(['placements', 'Placements', 'case'], ['people', 'People', 'users']);
+  if (r !== 'admin') items.push(['messages', 'Messages', 'message', (c.requests || 0) + (c.unread || 0)]);
+  items.push(['fame', 'Wall of Fame', 'trophy'], ['settings', 'Settings', 'gear']);
   return items;
 }
 function navHTML(r) {
   const cur = r.name === 'u' ? (Number(r.id) === S.me.id ? 'u/' + S.me.id : 'people') : r.name;
   return `<nav class="nav" id="nav" aria-label="Main">${navItems().map(([k, l, ic, n]) => `<button data-go="#/${k}" ${cur === k ? 'aria-current="page"' : ''}>${icon(ic, 20)}<span>${l}</span>${n ? `<span class="badge">${n}</span>` : ''}</button>`).join('')}</nav>`;
 }
-const bellHTML = () => `<button class="iconbtn" id="bell" data-go="#/messages" aria-label="Messages and requests">${icon('bell', 22)}${(S.counts.requests || 0) + (S.counts.unread || 0) ? '<span class="dot"></span>' : ''}</button>`;
+const bellHTML = () => S.me.role === 'admin' ? '<span id="bell" hidden></span>' : `<button class="iconbtn" id="bell" data-go="#/messages" aria-label="Messages and requests">${icon('bell', 22)}${(S.counts.requests || 0) + (S.counts.unread || 0) ? '<span class="dot"></span>' : ''}</button>`;
 const TITLES = { placements: 'Placements', digitize: 'Digitize records', people: 'People', messages: 'Messages', verify: 'Verification', admin: 'IQAC Dashboard', fame: 'Wall of Fame', settings: 'Settings', u: 'Profile' };
 function shell(r) {
   const hr = new Date().getHours(), greet = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
@@ -334,7 +337,7 @@ function personCard(u) {
     <div class="acts">${chatBtn(u, u.relation, 'btn-sm')}<button class="btn btn-g btn-sm" data-go="#/u/${u.id}">View profile</button></div></div></article>`;
 }
 function chatBtn(u, rel, sm = '') {
-  if (!rel || rel.kind === 'self') return '';
+  if (!rel || rel.kind === 'self' || S.me.role === 'admin' || u.role === 'admin') return '';
   if (rel.kind === 'chat') return `<button class="btn btn-p ${sm}" data-go="#/messages/${rel.chat_id}">${icon('message', 15)}Message</button>`;
   if (rel.kind === 'sent') return `<button class="btn ${sm}" disabled>${icon('clock', 15)}Request sent</button>`;
   if (rel.kind === 'received') return `<button class="btn btn-p ${sm}" data-act="msgtab" data-k="requests">${icon('message', 15)}Reply to request</button>`;
@@ -372,7 +375,7 @@ async function viewProfile(id) {
           ${u.mentor ? '<span class="chip chip-a">Open to mentoring</span>' : ''}${u.links.map(l => `<span class="chip">${icon('link', 12)}${esc(l)}</span>`).join('')}</div>
         <div class="row" style="margin-top:14px">${own ? `<button class="btn btn-p" data-act="add">${icon('plus', 15)}Add to journey</button><button class="btn" data-go="#/settings">Edit profile</button>` : chatBtn(u, d.relation)}
           <button class="btn" data-act="copy" data-t="${esc(link)}">${icon('copy', 15)}Copy profile link</button>
-          ${!own ? `<button class="btn btn-g" data-act="report" data-id="${u.id}" data-name="${esc(u.name)}">Report incorrect info</button>` : ''}</div>
+          ${!own && S.me.role !== 'admin' ? `<button class="btn btn-g" data-act="report" data-id="${u.id}" data-name="${esc(u.name)}">Report incorrect info</button>` : ''}</div>
       </div></section>
     ${u.about ? `<section class="card"><div class="card-h"><h2>About</h2></div><p style="max-width:70ch">${esc(u.about)}</p></section>` : ''}
     <section class="card"><div class="between"><h2 style="font-size:16px">Journey</h2><div class="row">${counts.map(([l, n]) => `<span class="chip ${l === 'National' || l === 'International' ? 'chip-g' : ''}">${n} ${l}</span>`).join('')}</div></div>
@@ -386,7 +389,7 @@ async function viewProfile(id) {
     <aside class="stack">
       ${own && d.strength ? `<section class="card stack" style="gap:10px"><div class="card-h" style="margin:0"><h2>Profile strength</h2><span class="small muted">${d.strength.pct}%</span></div><div class="meter"><span style="width:${d.strength.pct}%"></span></div>
         ${d.strength.checks.map(c => `<div class="tick ${c.done ? 'done' : ''}">${icon(c.done ? 'check' : 'plus', 15)}<span>${esc(c.label)}</span></div>`).join('')}</section>` : ''}
-      ${!own ? `<section class="card stack" style="gap:10px"><h2 style="font-size:15px">Talk to ${esc(first(u.name))}</h2>
+      ${!own && S.me.role !== 'admin' && !d.unclaimed ? `<section class="card stack" style="gap:10px"><h2 style="font-size:15px">Talk to ${esc(first(u.name))}</h2>
         ${u.mentor ? `<p class="small">Open to mentoring on:</p><div class="row">${u.topics.map(t => `<span class="chip">${esc(t)}</span>`).join('')}</div>` : `<p class="small">${u.accepts ? 'Accepts chat requests.' : 'Not taking chat requests right now.'}</p>`}
         <div>${chatBtn(u, d.relation)}</div><p class="small muted">${icon('lock', 13)} Your request includes your profile and a short note. Phone numbers and emails stay hidden.</p></section>` : ''}
       ${u.skills.length ? `<section class="card"><div class="card-h"><h2>Skills</h2></div><div class="row">${u.skills.map(s => `<span class="chip">${esc(s)}</span>`).join('')}</div></section>` : ''}

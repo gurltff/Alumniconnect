@@ -177,6 +177,7 @@ app.get('/api/me', auth(), (req, res) => {
     (SELECT count(*) FROM chat_requests WHERE to_id = ? AND status = 'pending') requests,
     (SELECT count(*) FROM messages m JOIN chats c ON c.id = m.chat_id WHERE (c.a_id = ? OR c.b_id = ?) AND m.sender_id != ? AND m.read_at IS NULL) unread`,
     req.user.id, req.user.id, req.user.id, req.user.id);
+  if (req.user.role === 'admin') { counts.requests = 0; counts.unread = 0; }
   res.json({ user: publicUser(req.user, req.user), counts: { ...counts, queue: queueCount(req.user) } });
 });
 app.patch('/api/me', auth(), (req, res) => {
@@ -449,10 +450,13 @@ app.post('/api/reports', auth(), (req, res) => {
 });
 
 /* ---------- chat requests + chats ---------- */
-app.post('/api/requests', auth(), (req, res) => {
+// Chat is for students, alumni and faculty. The IQAC admin account does not chat.
+const chatUser = auth('student', 'alumni', 'faculty');
+app.post('/api/requests', chatUser, (req, res) => {
   const to = q.get(`SELECT * FROM users WHERE id = ? AND account = 'active'`, Number(req.body.to));
   const purpose = PURPOSES.includes(req.body.purpose) ? req.body.purpose : null, note = str(req.body.note, 300);
   if (!to || to.id === req.user.id) return fail(res, 400, 'Pick someone to send the request to.');
+  if (to.role === 'admin') return fail(res, 400, 'The IQAC office can’t be messaged here. Use the college’s official contact.');
   if (!to.accepts) return fail(res, 400, `${to.name} isn’t taking chat requests right now.`);
   if (!purpose) return fail(res, 400, 'Pick what the request is about.');
   if (note.length < 10) return fail(res, 400, 'Add a short note (at least 10 characters) so they know who you are.');
@@ -460,7 +464,7 @@ app.post('/api/requests', auth(), (req, res) => {
   q.run('INSERT INTO chat_requests (from_id, to_id, purpose, note) VALUES (?,?,?,?)', req.user.id, to.id, purpose, note);
   res.json({ ok: true });
 });
-app.get('/api/requests', auth(), (req, res) => {
+app.get('/api/requests', chatUser, (req, res) => {
   const cols = 'r.id, r.purpose, r.note, r.status, r.created_at, u.id uid, u.name, u.headline, u.role, u.dept, u.avatar';
   const shape = rows => rows.map(r => ({ ...r, avatar_url: img(r.avatar), avatar: undefined }));
   res.json({
@@ -468,7 +472,7 @@ app.get('/api/requests', auth(), (req, res) => {
     sent: shape(q.all(`SELECT ${cols} FROM chat_requests r JOIN users u ON u.id = r.to_id WHERE r.from_id = ? AND r.status = 'pending' ORDER BY r.created_at DESC`, req.user.id))
   });
 });
-app.post('/api/requests/:id/:action', auth(), (req, res) => {
+app.post('/api/requests/:id/:action', chatUser, (req, res) => {
   const r = q.get(`SELECT * FROM chat_requests WHERE id = ? AND status = 'pending'`, Number(req.params.id));
   if (!r) return fail(res, 404, 'This request is no longer open.');
   const act = req.params.action;
@@ -503,8 +507,8 @@ function chatFor(req, res) {
   if (!c || (c.a_id !== req.user.id && c.b_id !== req.user.id)) { fail(res, 404, 'Chat not found.'); return null; }
   return c;
 }
-app.get('/api/chats', auth(), (req, res) => res.json({ chats: chatList(req.user.id) }));
-app.get('/api/chats/:id/messages', auth(), (req, res) => {
+app.get('/api/chats', chatUser, (req, res) => res.json({ chats: chatList(req.user.id) }));
+app.get('/api/chats/:id/messages', chatUser, (req, res) => {
   const c = chatFor(req, res); if (!c) return;
   const after = Number(req.query.after) || 0;
   const msgs = q.all('SELECT id, sender_id, body, created_at FROM messages WHERE chat_id = ? AND id > ? ORDER BY id', c.id, after);
@@ -512,7 +516,7 @@ app.get('/api/chats/:id/messages', auth(), (req, res) => {
   const p = q.get('SELECT * FROM users WHERE id = ?', c.a_id === req.user.id ? c.b_id : c.a_id);
   res.json({ chat: { id: c.id, purpose: c.purpose, created_at: c.created_at, partner: publicUser(p, req.user) }, messages: msgs });
 });
-app.post('/api/chats/:id/messages', auth(), (req, res) => {
+app.post('/api/chats/:id/messages', chatUser, (req, res) => {
   const c = chatFor(req, res); if (!c) return;
   const body = str(req.body.body, 2000);
   if (!body) return fail(res, 400, 'Write a message first.');
