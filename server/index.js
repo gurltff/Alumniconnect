@@ -17,6 +17,9 @@ const STATUSES = ['Job', 'Higher studies', 'Research', 'Govt services', 'Entrepr
 const STATUS_KIND = { 'Job': 'job', 'Higher studies': 'study', 'Research': 'phd', 'Govt services': 'job', 'Entrepreneurship': 'startup' };
 const PURPOSES = ['Mentorship', 'Career advice', 'Resume review', 'Internship / referral', 'Higher studies advice', 'Project collaboration'];
 const FILE_TYPES = { pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg' };
+const IMAGE_TYPES = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' };
+const BANNERS = ['navy', 'slate', 'teal', 'forest', 'plum', 'sand'];
+const img = name => name ? '/api/images/' + name : null;
 
 const now = () => new Date().toISOString().slice(0, 19).replace('T', ' ');
 const thisMonth = () => new Date().toISOString().slice(0, 7);
@@ -67,6 +70,9 @@ function publicUser(u, viewer) {
     id: u.id, role: u.role, name: u.name, dept: u.dept, adm_year: u.adm_year, grad_year: u.grad_year,
     headline: u.headline, about: u.about, location: u.location, status: u.status, now_title: u.now_title, sector: u.sector,
     status_updated: u.status_updated, mentor: !!u.mentor, accepts: !!u.accepts,
+    avatar_url: img(u.avatar),
+    banner_url: u.banner && !u.banner.startsWith('preset:') ? img(u.banner) : null,
+    banner_preset: u.banner && u.banner.startsWith('preset:') ? u.banner.slice(7) : 'navy',
     skills: JSON.parse(u.skills || '[]'), topics: JSON.parse(u.topics || '[]'), links: JSON.parse(u.links || '[]'), scope: u.scope,
     ...(self ? { email: u.email, college_id: u.college_id, account: u.account } : {})
   };
@@ -199,16 +205,48 @@ app.post('/api/me/status', auth('alumni'), (req, res) => {
   res.json({ ok: true, message: 'Sent to IQAC. Your profile keeps the current status until it’s approved.' });
 });
 
+app.post('/api/me/image', auth(), (req, res) => {
+  const kind = req.body.kind === 'banner' ? 'banner' : req.body.kind === 'avatar' ? 'avatar' : null;
+  if (!kind) return fail(res, 400, 'Unknown image type.');
+  const old = req.user[kind];
+  let value = null;
+  if (kind === 'banner' && req.body.preset) {
+    if (!BANNERS.includes(req.body.preset)) return fail(res, 400, 'Pick one of the banner colours.');
+    value = 'preset:' + req.body.preset;
+  } else if (!req.body.remove) {
+    const ext = String(req.body.name || '').split('.').pop().toLowerCase();
+    if (!IMAGE_TYPES[ext]) return fail(res, 400, 'Upload a PNG, JPG or WebP image.');
+    const buf = Buffer.from(String(req.body.data || ''), 'base64');
+    if (!buf.length || buf.length > 4 * 1024 * 1024) return fail(res, 400, 'The image must be smaller than 4 MB.');
+    value = `${kind}-${crypto.randomBytes(12).toString('hex')}.${ext}`;
+    fs.writeFileSync(path.join(UPLOAD_DIR, value), buf);
+  }
+  q.run(`UPDATE users SET ${kind} = ? WHERE id = ?`, value, req.user.id);
+  if (old && !old.startsWith('preset:')) fs.rm(path.join(UPLOAD_DIR, path.basename(old)), () => {});
+  res.json({ user: publicUser(q.get('SELECT * FROM users WHERE id = ?', req.user.id), req.user) });
+});
+app.get('/api/images/:name', auth(), (req, res) => {
+  const name = path.basename(req.params.name), ext = name.split('.').pop();
+  if (!/^(avatar|banner)-[a-f0-9]+\.\w+$/.test(name) || !IMAGE_TYPES[ext]) return fail(res, 404, 'Not found.');
+  const file = path.join(UPLOAD_DIR, name);
+  if (!fs.existsSync(file)) return fail(res, 404, 'Not found.');
+  res.setHeader('Content-Type', IMAGE_TYPES[ext]);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Cache-Control', 'private, max-age=86400');
+  fs.createReadStream(file).pipe(res);
+});
+
 /* ---------- dashboard ---------- */
 app.get('/api/dashboard', auth(), (req, res) => {
   const u = req.user, ms = q.all('SELECT * FROM milestones WHERE user_id = ?', u.id);
   const chats = chatList(u.id).slice(0, 4);
-  const reqIn = q.all(`SELECT r.*, u.name, u.headline FROM chat_requests r JOIN users u ON u.id = r.from_id WHERE r.to_id = ? AND r.status = 'pending' ORDER BY r.created_at DESC`, u.id);
+  const reqIn = q.all(`SELECT r.*, u.name, u.headline, u.avatar FROM chat_requests r JOIN users u ON u.id = r.from_id WHERE r.to_id = ? AND r.status = 'pending' ORDER BY r.created_at DESC`, u.id);
   const reqOut = q.all(`SELECT status FROM chat_requests WHERE from_id = ?`, u.id);
   const linkedIds = chats.map(c => c.partner.id);
   const suggestions = q.all(`SELECT u.* FROM users u WHERE u.role = ? AND u.account = 'active' AND u.id != ? AND ${u.role === 'student' ? 'u.mentor = 1 AND' : ''} u.dept = ?
       ORDER BY (u.about != '') DESC, ${vcountSql} DESC LIMIT 6`, u.role === 'alumni' ? 'student' : 'alumni', u.id, u.dept)
     .filter(x => !linkedIds.includes(x.id)).slice(0, 3).map(x => publicUser(x, u));
+  reqIn.forEach(r => { r.avatar_url = img(r.avatar); delete r.avatar; });
   // Activity feed for the calendar: things that happened to this person.
   const activity = [
     ...q.all(`SELECT m.submitted_at at, 'Sent for verification: ' || m.title text, 'pending' type FROM milestones m WHERE m.user_id = ? AND m.status IN ('pending','info')`, u.id),
@@ -335,10 +373,10 @@ function queueCount(u) {
 }
 app.get('/api/verify', auth('faculty', 'admin'), (req, res) => {
   const mine = req.user.role === 'faculty';
-  const items = q.all(`${MS_SELECT.replace('SELECT m.*', 'SELECT m.*, o.name oname, o.dept odept, o.college_id ocid, o.role orole, o.adm_year oadm, o.grad_year ograd')}
+  const items = q.all(`${MS_SELECT.replace('SELECT m.*', 'SELECT m.*, o.name oname, o.dept odept, o.college_id ocid, o.role orole, o.adm_year oadm, o.grad_year ograd, o.avatar oavatar')}
     JOIN users o ON o.id = m.user_id WHERE m.status IN ('pending','info') ${mine ? 'AND m.verifier_id = ?' : ''} ORDER BY m.submitted_at`, ...(mine ? [req.user.id] : []))
     .map(m => ({ type: 'milestone', id: m.id, submitted_at: m.submitted_at, status: m.status, meta: m.meta ? JSON.parse(m.meta) : null,
-      person: { id: m.user_id, name: m.oname, dept: m.odept, college_id: m.ocid, role: m.orole, adm_year: m.oadm, grad_year: m.ograd }, milestone: shapeMilestone(m, req.user) }));
+      person: { id: m.user_id, name: m.oname, dept: m.odept, college_id: m.ocid, role: m.orole, adm_year: m.oadm, grad_year: m.ograd, avatar_url: img(m.oavatar) }, milestone: shapeMilestone(m, req.user) }));
   if (!mine) {
     for (const u of q.all(`SELECT * FROM users WHERE account = 'pending' ORDER BY created_at`)) {
       const match = q.get(`SELECT count(*) n FROM users WHERE dept = ? AND (grad_year = ? OR adm_year = ?) AND account = 'active'`, u.dept, u.grad_year, u.adm_year).n;
@@ -415,10 +453,11 @@ app.post('/api/requests', auth(), (req, res) => {
   res.json({ ok: true });
 });
 app.get('/api/requests', auth(), (req, res) => {
-  const cols = 'r.id, r.purpose, r.note, r.status, r.created_at, u.id uid, u.name, u.headline, u.role, u.dept';
+  const cols = 'r.id, r.purpose, r.note, r.status, r.created_at, u.id uid, u.name, u.headline, u.role, u.dept, u.avatar';
+  const shape = rows => rows.map(r => ({ ...r, avatar_url: img(r.avatar), avatar: undefined }));
   res.json({
-    received: q.all(`SELECT ${cols} FROM chat_requests r JOIN users u ON u.id = r.from_id WHERE r.to_id = ? AND r.status = 'pending' ORDER BY r.created_at DESC`, req.user.id),
-    sent: q.all(`SELECT ${cols} FROM chat_requests r JOIN users u ON u.id = r.to_id WHERE r.from_id = ? AND r.status = 'pending' ORDER BY r.created_at DESC`, req.user.id)
+    received: shape(q.all(`SELECT ${cols} FROM chat_requests r JOIN users u ON u.id = r.from_id WHERE r.to_id = ? AND r.status = 'pending' ORDER BY r.created_at DESC`, req.user.id)),
+    sent: shape(q.all(`SELECT ${cols} FROM chat_requests r JOIN users u ON u.id = r.to_id WHERE r.from_id = ? AND r.status = 'pending' ORDER BY r.created_at DESC`, req.user.id))
   });
 });
 app.post('/api/requests/:id/:action', auth(), (req, res) => {
@@ -449,7 +488,7 @@ function chatList(uid) {
     FROM chats c WHERE c.a_id = ? OR c.b_id = ? ORDER BY last_at DESC`, uid, uid, uid)
     .map(c => { const p = q.get('SELECT * FROM users WHERE id = ?', c.a_id === uid ? c.b_id : c.a_id);
       return { id: c.id, purpose: c.purpose, created_at: c.created_at, last: c.last_body, last_mine: c.last_sender === uid, last_at: c.last_at, unread: c.unread,
-        partner: { id: p.id, name: p.name, headline: p.headline, role: p.role } }; });
+        partner: { id: p.id, name: p.name, headline: p.headline, role: p.role, avatar_url: img(p.avatar) } }; });
 }
 function chatFor(req, res) {
   const c = q.get('SELECT * FROM chats WHERE id = ?', Number(req.params.id));
@@ -478,11 +517,11 @@ const FAME = [['research', 'Researcher of the Year'], ['sports', 'Sports Star'],
 app.get('/api/fame', auth(), (req, res) => {
   const ay = Number(req.query.ay) || curAY() - 1;
   const rank = `CASE m.level WHEN 'International' THEN 4 WHEN 'National' THEN 3 WHEN 'State' THEN 2 WHEN 'University' THEN 1 ELSE 0 END`;
-  const cats = FAME.map(([cat, label]) => ({ cat, label, entries: q.all(`SELECT m.id, m.title, m.level, m.month, u.id uid, u.name, u.role, u.dept, u.grad_year, u.adm_year
+  const cats = FAME.map(([cat, label]) => ({ cat, label, entries: q.all(`SELECT m.id, m.title, m.level, m.month, u.id uid, u.name, u.role, u.avatar, u.dept, u.grad_year, u.adm_year
       FROM milestones m JOIN users u ON u.id = m.user_id WHERE m.status = 'verified' AND m.category = ? AND m.month BETWEEN ? AND ?
-      ORDER BY ${rank} DESC, (u.about != '') DESC, m.month DESC LIMIT 4`, cat, `${ay}-07`, `${ay + 1}-06`) }));
-  const spotlight = q.all(`SELECT u.id, u.name, u.headline, u.dept, u.grad_year, count(r.id) accepted FROM users u JOIN chat_requests r ON r.to_id = u.id AND r.status = 'accepted'
-    WHERE u.role = 'alumni' GROUP BY u.id ORDER BY accepted DESC LIMIT 3`);
+      ORDER BY ${rank} DESC, (u.about != '') DESC, m.month DESC LIMIT 4`, cat, `${ay}-07`, `${ay + 1}-06`).map(e => ({ ...e, avatar_url: img(e.avatar) })) }));
+  const spotlight = q.all(`SELECT u.id, u.name, u.headline, u.dept, u.grad_year, u.avatar, count(r.id) accepted FROM users u JOIN chat_requests r ON r.to_id = u.id AND r.status = 'accepted'
+    WHERE u.role = 'alumni' GROUP BY u.id ORDER BY accepted DESC LIMIT 3`).map(e => ({ ...e, avatar_url: img(e.avatar) }));
   res.json({ ay, categories: cats, spotlight });
 });
 

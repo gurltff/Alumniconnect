@@ -128,6 +128,11 @@ CREATE TABLE IF NOT EXISTS audit_log (
 );
 `);
 
+// Columns added after the first release.
+for (const [col, type] of [['avatar', 'TEXT'], ['banner', 'TEXT']]) {
+  if (!db.prepare('PRAGMA table_info(users)').all().some(c => c.name === col)) db.exec(`ALTER TABLE users ADD COLUMN ${col} ${type}`);
+}
+
 const q = {
   all: (sql, ...p) => db.prepare(sql).all(...p),
   get: (sql, ...p) => db.prepare(sql).get(...p),

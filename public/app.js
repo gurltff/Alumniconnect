@@ -52,6 +52,7 @@ const P = {
   rocket: '<path d="M5 15c-1.5 1.5-2 4-2 6 2 0 4.5-.5 6-2M9 15l-3-3c1-4 4.5-8.5 12-9 0 7.5-5 11-9 12z"/><circle cx="15" cy="9" r="1.5"/>',
   file: '<path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5"/>',
   bulb: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>',
+  camera: '<path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/>',
   dots: '<circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/>',
   left: '<path d="M15 6l-6 6 6 6"/>', right: '<path d="M9 6l6 6-6 6"/>'
 };
@@ -67,7 +68,7 @@ const CATS = [['tech', 'Tech & coding'], ['sports', 'Sports'], ['research', 'Res
 /* ---------- state + api ---------- */
 const S = {
   me: null, counts: {}, meta: null,
-  explain: (() => { try { return localStorage.getItem('ac-explain') !== '0'; } catch { return true; } })(),
+  explain: (() => { try { return localStorage.getItem('ac-explain') === '1'; } catch { return false; } })(),
   people: { q: '', role: '', dept: '', mentor: false, path: '', limit: 24 },
   prof: { jf: 'all', ph: '', open: new Set(), id: null },
   msg: { tab: 'chats', last: 0 },
@@ -90,7 +91,11 @@ const deptName = c => (S.meta?.departments.find(d => d.code === c) || {}).name |
 const course = c => (S.meta?.departments.find(d => d.code === c) || {}).course || '';
 
 /* ---------- small pieces ---------- */
-const av = (u, cls = '') => `<span class="av ${['', 't2', 't3'][(u.id || 0) % 3]} ${cls}" aria-hidden="true">${esc(initials(u.name))}</span>`;
+const av = (u, cls = '') => u.avatar_url ? `<img class="av ${cls}" src="${esc(u.avatar_url)}" alt="">`
+  : `<span class="av ${['', 't2', 't3'][(u.id || 0) % 3]} ${cls}" aria-hidden="true">${esc(initials(u.name))}</span>`;
+const BANNERS = ['navy', 'slate', 'teal', 'forest', 'plum', 'sand'];
+const bannerClass = u => u.banner_url ? '' : 'bn-' + (BANNERS.includes(u.banner_preset) ? u.banner_preset : 'navy');
+const bannerStyle = u => u.banner_url ? `style="background-image:url('${esc(u.banner_url)}')"` : '';
 const lvl = l => l ? `<span class="lv ${l === 'National' || l === 'International' ? 'lv-hi' : ''}">${esc(l)}</span>` : '';
 function pill(s) {
   if (s === 'verified') return `<span class="st st-ok">${icon('check', 13)}Verified</span>`;
@@ -103,16 +108,16 @@ function meta(u) {
   if (u.role === 'student') return `${course(u.dept)} · ${ord(CUR_AY - u.adm_year + 1)} year`;
   return u.headline;
 }
-function ring(pct, color) {
-  const r = 34, c = 2 * Math.PI * r;
-  return `<svg width="96" height="96" viewBox="0 0 96 96" role="img" aria-label="${pct}%"><circle cx="48" cy="48" r="${r}" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="9"/>
-    <circle cx="48" cy="48" r="${r}" fill="none" stroke="${color}" stroke-width="9" stroke-linecap="round" stroke-dasharray="${(c * pct / 100).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 48 48)"/>
-    <text x="48" y="55" text-anchor="middle">${pct}%</text></svg>`;
+function ring(pct) {
+  const r = 22, c = 2 * Math.PI * r;
+  return `<svg width="56" height="56" viewBox="0 0 56 56" role="img" aria-label="${pct}%" style="flex:none"><circle cx="28" cy="28" r="${r}" fill="none" stroke="#e6e9ee" stroke-width="5"/>
+    <circle cx="28" cy="28" r="${r}" fill="none" stroke="#23569b" stroke-width="5" stroke-dasharray="${(c * pct / 100).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 28 28)"/>
+    <text x="28" y="32" text-anchor="middle" style="font:600 12px var(--font);fill:#1c2430">${pct}%</text></svg>`;
 }
 function why(key) {
   if (!S.explain) return '';
   const W = WHY[key]; if (!W) return '';
-  return `<aside class="why" aria-label="Why this feature matters">${icon('bulb', 22)}<p class="lead"><b>${esc(W[0])}</b></p>
+  return `<aside class="why" aria-label="Why this feature matters">${icon('info', 18)}<p class="lead"><b>${esc(W[0])}</b></p>
     <div style="grid-column:2"><h3>For students &amp; alumni</h3><p>${esc(W[1])}</p></div><div><h3>For the college</h3><p>${esc(W[2])}</p></div></aside>`;
 }
 const WHY = {
@@ -174,11 +179,12 @@ function navHTML(r) {
 const bellHTML = () => `<button class="iconbtn" id="bell" data-go="#/messages" aria-label="Messages and requests">${icon('bell', 22)}${(S.counts.requests || 0) + (S.counts.unread || 0) ? '<span class="dot"></span>' : ''}</button>`;
 const TITLES = { people: 'People', messages: 'Messages', verify: 'Verification', admin: 'IQAC Dashboard', fame: 'Wall of Fame', settings: 'Settings', u: 'Profile' };
 function shell(r) {
-  const hello = r.name === 'dashboard' ? `Hello, ${esc(first(S.me.name))}!` : TITLES[r.name] || 'Dashboard';
+  const hr = new Date().getHours(), greet = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
+  const hello = r.name === 'dashboard' ? `${greet}, ${esc(first(S.me.name))}` : TITLES[r.name] || 'Dashboard';
   return `<div class="frame">
     <aside class="side">
-      <button class="logo" data-go="${home()}" aria-label="AlumniConnect home">Alumni${icon('shield', 22)}<i>Connect</i></button>
-      <div class="me">${av(S.me, 'av-lg')}<div><b>${esc(S.me.name)}</b><span>${esc(S.me.role === 'student' ? 'Student' : S.me.role === 'alumni' ? 'Alumni' : S.me.role === 'faculty' ? 'Faculty verifier' : 'IQAC admin')}</span></div></div>
+      <button class="logo" data-go="${home()}" aria-label="AlumniConnect home"><span class="mark">AC</span>AlumniConnect</button>
+      <div class="me">${av(S.me)}<div><b>${esc(S.me.name)}</b><span>${esc(S.me.role === 'student' ? 'Student' : S.me.role === 'alumni' ? 'Alumni' : S.me.role === 'faculty' ? 'Faculty verifier' : 'IQAC admin')}</span></div></div>
       ${navHTML(r)}
       <div class="side-foot"><button data-act="logout">${icon('out', 20)}Log out</button></div>
     </aside>
@@ -186,7 +192,7 @@ function shell(r) {
       <header class="head"><h1 class="hello">${hello}</h1>
         <form class="search" data-form="topsearch" role="search">${icon('search', 18)}<label for="top-q" hidden>Search people</label><input id="top-q" type="search" placeholder="Search people, skills, achievements" value="${esc(S.people.q)}"></form>
         ${bellHTML()}
-        <button class="switch" data-act="explain" aria-pressed="${S.explain}"><i></i>Explain features</button>
+        <button class="switch" data-act="explain" aria-pressed="${S.explain}" title="Show a short note on each page about how the feature helps"><i></i>Feature notes</button>
       </header>
       <section id="view"></section>
     </main>
@@ -194,45 +200,35 @@ function shell(r) {
 }
 
 /* ---------- login / register ---------- */
+function authSide() {
+  return `<section class="auth-l"><div class="logo"><span class="mark">AC</span>AlumniConnect</div>
+    <div><h1>The alumni and achievement network of Your College Name</h1>
+      <p>Student and alumni profiles, verified achievements, mentoring and IQAC reports in one place.</p></div>
+    <footer>Internal Quality Assurance Cell · Your College Name</footer></section>`;
+}
 async function viewLogin() {
-  let st = { alumni: 0, verified: 0, active: 0, mentors: 0 };
-  try { st = await api('/api/stats/public'); } catch { }
-  const demo = [['priya@college.example', 'Priya Singh', 'Student · 3rd year, Computer Science'], ['ishita@college.example', 'Ishita Bansal', 'Alumni · Software Engineer, class of 2023'],
-    ['rekha@college.example', 'Dr. Rekha Sinha', 'Faculty verifier · Computer Science'], ['iqac@college.example', 'Dr. Meenakshi Iyer', 'IQAC admin']];
-  return `<div class="auth">
-    <section class="auth-l">
-      <div class="logo">Alumni${icon('shield', 22)}<i>Connect</i></div>
-      <div><p class="small muted" style="letter-spacing:.08em;text-transform:uppercase">Your College Name · Alumni &amp; Achievement Network</p>
-      <h1 class="hero-h" style="margin-top:10px">Every achievement checked by the college. Every senior one request away.</h1></div>
-      <div class="stats">${[['Alumni on record', st.alumni], ['Verified achievements', st.verified], ['Active in 90 days', st.active], ['Alumni mentors', st.mentors]].map(([l, v]) => `<div><b>${fmtN(v)}</b><span>${l}</span></div>`).join('')}</div>
-      <div class="feat">
-        <div><b>${icon('user', 18)}Verified profiles</b><p>A LinkedIn-style journey from 1st year to career. Faculty verify every milestone, with proof.</p></div>
-        <div><b>${icon('users', 18)}Search by path</b><p>Find seniors who cleared an exam, went into research or started a business.</p></div>
-        <div><b>${icon('message', 18)}Safe mentor chat</b><p>Send a request with a note. The chat opens only if they accept. Contact details stay hidden.</p></div>
-        <div><b>${icon('chart', 18)}NAAC &amp; NIRF in one click</b><p>IQAC exports audit-ready reports from verified records instead of chasing Google Forms.</p></div>
-      </div>
-    </section>
-    <section class="auth-r">
-      <h2 class="title">Log in</h2>
+  const demo = [['priya@college.example', 'Priya Singh', 'Student'], ['ishita@college.example', 'Ishita Bansal', 'Alumni'],
+    ['rekha@college.example', 'Dr. Rekha Sinha', 'Faculty verifier'], ['iqac@college.example', 'Dr. Meenakshi Iyer', 'IQAC admin']];
+  return `<div class="auth">${authSide()}
+    <section class="auth-r"><div class="auth-box">
+      <div><h2>Log in</h2><p class="small muted" style="margin-top:4px">Use your college email.</p></div>
       <form class="stack" data-form="login" style="gap:12px">
-        <div class="fld"><label for="l-email">College email</label><input id="l-email" type="email" autocomplete="username" required></div>
+        <div class="fld"><label for="l-email">Email</label><input id="l-email" type="email" autocomplete="username" required></div>
         <div class="fld"><label for="l-pass">Password</label><input id="l-pass" type="password" autocomplete="current-password" required></div>
         <p class="err" id="l-err" hidden></p>
-        <button class="btn btn-p" type="submit">Log in</button>
+        <button class="btn btn-p" type="submit" style="height:38px">Log in</button>
       </form>
-      <p class="small">New here? <a href="#/register">Register as a student or alumni</a></p>
-      <div class="stack" style="gap:8px"><p class="small muted">Demo accounts (password <span class="mono">demo1234</span>):</p>
-        <div class="demo-acc">${demo.map(([e, n, d], i) => `<button data-act="demo" data-email="${e}">${av({ id: i, name: n }, 'av-sm')}<div><b>${esc(n)}</b><span>${esc(d)}</span></div></button>`).join('')}</div></div>
-    </section>
+      <p class="small">New user? <a href="#/register">Create an account</a></p>
+      <div class="divider">Demo accounts · password demo1234</div>
+      <div class="demo-acc">${demo.map(([e, n, d], i) => `<button data-act="demo" data-email="${e}">${av({ id: i, name: n }, 'av-sm')}<div><b>${esc(n)}</b><span>${esc(d)} · ${e}</span></div></button>`).join('')}</div>
+    </div></section>
   </div>`;
 }
 function viewRegister() {
   const opts = (S.meta?.departments || []).map(d => `<option value="${d.code}">${esc(d.name)}</option>`).join('');
   const y = new Date().getFullYear();
-  return `<div class="auth" style="grid-template-columns:1fr;max-width:620px"><section class="auth-r">
-    <div class="logo">Alumni${icon('shield', 22)}<i>Connect</i></div>
-    <h1 class="title">Register</h1>
-    <p class="small muted">IQAC checks every registration against college records before the account is activated.</p>
+  return `<div class="auth">${authSide()}<section class="auth-r"><div class="auth-box" style="width:min(460px,100%)">
+    <div><h2>Create an account</h2><p class="small muted" style="margin-top:4px">IQAC checks every registration against college records before the account is activated.</p></div>
     <form class="stack" data-form="register" style="gap:12px">
       <div class="fld"><label for="r-role">I am</label><select id="r-role"><option value="student">A current student</option><option value="alumni">An alumna or alumnus</option></select></div>
       <div class="fld"><label for="r-name">Full name</label><input id="r-name" type="text" required></div>
@@ -246,8 +242,8 @@ function viewRegister() {
       <div class="fld"><label for="r-cid">College roll number</label><input id="r-cid" type="text" required></div>
       <p class="err" id="r-err" hidden></p>
       <button class="btn btn-p" type="submit">Send registration</button>
-      <a class="small" href="#/login">Back to log in</a>
-    </form></section></div>`;
+      <p class="small">Already registered? <a href="#/login">Log in</a></p>
+    </form></div></section></div>`;
 }
 
 /* ---------- dashboard ---------- */
@@ -256,33 +252,31 @@ async function viewDash() {
   if (S.me.role === 'faculty') { location.hash = '#/verify'; return ''; }
   const d = await api('/api/dashboard'), alum = S.me.role === 'alumni';
   const linked = d.chats.map(c => `<div class="prow">${av(c.partner, 'av-sm')}<div><b>${esc(c.partner.name)}</b><span>${esc(c.partner.role === 'alumni' ? 'Alumni' : 'Student')} · ${esc(c.purpose)}</span></div>
-      <button class="round" data-go="#/messages/${c.id}" aria-label="Open chat with ${esc(c.partner.name)}">${c.unread ? `<span style="font-size:11px">${c.unread}</span>` : icon('dots', 16)}</button></div>`);
-  const sugg = d.suggestions.map(s => `<div class="prow">${av(s, 'av-sm')}<div><b>${esc(s.name)}</b><span>${esc(s.headline)}</span></div>
-      <button class="round" data-go="#/u/${s.id}" aria-label="View ${esc(s.name)}">${icon('plus', 16)}</button></div>`);
+      <button class="round" data-go="#/messages/${c.id}" aria-label="Open chat with ${esc(c.partner.name)}">${c.unread ? c.unread + ' new' : icon('message', 15)}</button></div>`);
+  const sugg = d.suggestions.map(s => `<div class="prow">${av(s, 'av-sm')}<div><b>${esc(s.name)}</b><span>Suggested · ${esc(s.headline)}</span></div>
+      <button class="round" data-go="#/u/${s.id}" aria-label="View ${esc(s.name)}">View</button></div>`);
   const linkedRows = [...linked, ...sugg].slice(0, 3);
-  const waiting = d.requests.slice(0, 3).map(r => `<div class="prow" style="border-radius:16px">${av({ id: r.from_id, name: r.name })}<div><b>${esc(r.name)}</b><span>${esc(r.purpose)} · ${fmtDay(r.created_at)}</span></div>
-      <button class="round" data-go="#/messages" aria-label="Answer request">${icon('arrow', 16)}</button></div>`);
-  const pend = d.achievements.filter(a => a.status !== 'verified').slice(0, 2).map(a => `<div class="prow" style="border-radius:16px"><span class="ico-c">${icon('clock', 16)}</span><div><b>${esc(a.title)}</b><span>Waiting for ${esc(a.routed_to?.name || 'a verifier')}</span></div></div>`);
-  const now = new Date(), ym = now.toISOString().slice(0, 7);
-  const monthAct = d.activity.filter(a => a.at.slice(0, 7) === ym);
-  const colors = ['var(--ring-1)', 'var(--ring-2)', 'var(--ring-3)'];
+  const waiting = d.requests.slice(0, 3).map(r => `<div class="prow">${av({ id: r.from_id, name: r.name, avatar_url: r.avatar_url }, 'av-sm')}<div><b>${esc(r.name)}</b><span>Chat request · ${esc(r.purpose)}</span></div>
+      <button class="round" data-act="msgtab" data-k="requests">Reply</button></div>`);
+  const pend = d.achievements.filter(a => a.status !== 'verified').slice(0, 2).map(a => `<div class="prow"><span class="ico-c">${icon('clock', 15)}</span><div><b>${esc(a.title)}</b><span>Waiting for ${esc(a.routed_to?.name || 'a verifier')}</span></div></div>`);
+  const now = new Date();
+  const hints = { 'Profile strength': 'Complete your profile', 'Milestones verified': 'Of everything you added', 'Requests accepted': alum ? 'Of requests you received' : 'Of requests you sent' };
   return `${why('dash')}<div class="dash">
-    <section class="card ga"><div class="card-h"><h2>${alum ? 'Linked students' : 'Linked mentors'}</h2></div>
-      <div class="stack" style="gap:8px">${linkedRows.join('') || '<p class="small muted">No chats yet.</p>'}</div>
-      <div style="text-align:right;margin-top:10px"><button class="see" data-go="#/people">See more ${icon('right', 14)}</button></div></section>
-    <section class="card gb"><div class="card-h"><h2>Waiting for you</h2></div>
-      <div class="stack" style="gap:8px">${[...waiting, ...pend].slice(0, 3).join('') || '<p class="small muted">Nothing waiting. You’re all caught up.</p>'}</div>
-      <div style="text-align:right;margin-top:10px"><button class="see" data-go="#/messages">See more ${icon('right', 14)}</button></div></section>
-    <section class="card gc"><div class="card-h"><h2>My activity</h2></div>
-      <div class="sched">${calendar(now, d.activity)}
-        <div class="stack" style="gap:10px">${(monthAct.length ? monthAct : d.activity).slice(0, 3).map(a => `<div class="drow"><span class="day">${Number(a.at.slice(8, 10))}</span>
-          <div class="prow"><div><b>${esc(a.text)}</b><span>${fmtDay(a.at)}</span></div></div></div>`).join('') || '<p class="small muted">Your activity will show here.</p>'}</div></div></section>
-    <section class="card gd"><div class="card-h"><h2>My achievements</h2></div>
-      <div class="thumbs">${d.achievements.map(a => `<button class="thumb" data-go="#/u/${S.me.id}"><span class="thumb-img">${icon(KIND[a.kind]?.[0] || 'award', 38)}${lvl(a.level)}${pill(a.status)}</span><b>${esc(a.title)}</b></button>`).join('')
-        || `<div class="empty"><p>Your achievements will show here.</p><button class="btn btn-p" data-act="add">${icon('plus', 16)}Add your first one</button></div>`}</div>
-      <div style="text-align:right;margin-top:10px"><button class="see" data-act="add">Add to journey ${icon('plus', 14)}</button></div></section>
-    <aside class="rail gr">${d.rings.map((g, i) => `<div class="gauge"><h3>${esc(g.label)}</h3>${ring(g.pct, colors[i])}</div>`).join('')}
-      <button class="see" data-go="#/u/${S.me.id}">See more ${icon('arrow', 16)}</button></aside>
+    <section class="card ga"><div class="card-h"><h2>${alum ? 'Your students' : 'Your mentors'}</h2><button class="see" data-go="#/people">Find people</button></div>
+      <div>${linkedRows.join('') || '<p class="small muted">No chats yet.</p>'}</div></section>
+    <section class="card gb"><div class="card-h"><h2>Needs your attention</h2><button class="see" data-go="#/messages">Messages</button></div>
+      <div>${[...waiting, ...pend].slice(0, 3).join('') || '<p class="small muted">Nothing waiting. You’re all caught up.</p>'}</div></section>
+    <section class="card gc"><div class="card-h"><h2>Recent activity</h2></div>
+      <div class="sched"><div class="cal">${calendar(now, d.activity)}</div>
+        <div>${d.activity.slice(0, 4).map(a => `<div class="drow"><div class="day"><b>${Number(a.at.slice(8, 10))}</b><span>${M[Number(a.at.slice(5, 7)) - 1]}</span></div>
+          <div><p>${esc(a.text)}</p></div></div>`).join('') || '<p class="small muted">Your activity will show here.</p>'}</div></div></section>
+    <section class="card gd"><div class="card-h"><h2>Your achievements</h2><button class="see" data-act="add">${icon('plus', 14)} Add</button></div>
+      ${d.achievements.length ? `<div class="alist">${d.achievements.map(a => `<button class="aitem" data-go="#/u/${S.me.id}"><span class="ico-c">${icon(KIND[a.kind]?.[0] || 'award', 16)}</span>
+        <div><b>${esc(a.title)}</b><span class="row" style="gap:6px">${lvl(a.level)}${pill(a.status)}<span class="small muted">${fmtMonth(a.month)}</span></span></div></button>`).join('')}</div>`
+        : `<div class="empty"><p>Add your first achievement to start your journey.</p><button class="btn btn-p" data-act="add">${icon('plus', 15)}Add achievement</button></div>`}</section>
+    <aside class="rail gr">${d.rings.map(g => `<div class="card gauge">${ring(g.pct)}<div><h3>${esc(g.label)}</h3><p>${esc(hints[g.label] || '')}</p></div></div>`).join('')}
+      <div class="card"><div class="card-h" style="margin-bottom:8px"><h2>Profile</h2></div><p class="small muted">Keep your journey up to date so juniors and recruiters see your verified work.</p>
+        <button class="btn" style="margin-top:12px;width:100%" data-go="#/u/${S.me.id}">View my profile</button></div></aside>
   </div>`;
 }
 function calendar(date, activity) {
@@ -294,8 +288,8 @@ function calendar(date, activity) {
   for (let dd = 1; dd <= len; dd++) cells.push(`<td class="${dd === date.getDate() ? 'today' : days.has(dd) ? 'has' : ''}"><span>${dd}</span></td>`);
   for (let dd = 1; cells.length % 7; dd++) cells.push(`<td class="out"><span>${dd}</span></td>`);
   const rows = []; for (let i = 0; i < cells.length; i += 7) rows.push(`<tr>${cells.slice(i, i + 7).join('')}</tr>`);
-  return `<div class="cal"><div class="cal-h">${icon('left', 14)}<span>${MONTHS[m]} ${y}</span>${icon('right', 14)}</div>
-    <table><thead><tr>${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(x => `<th>${x}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
+  return `<div class="cal-h"><span>${MONTHS[m]} ${y}</span></div>
+    <table><thead><tr>${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(x => `<th>${x}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table>`;
 }
 
 /* ---------- people ---------- */
@@ -324,11 +318,11 @@ async function peopleResults() {
     ${r.total > r.people.length ? `<div style="text-align:center;margin-top:16px"><button class="btn" data-act="more">Show more</button></div>` : ''}`;
 }
 function personCard(u) {
-  return `<article class="card pcard"><div class="pcard-cov"></div><div class="pcard-b">${av(u, 'av-lg')}
+  return `<article class="card pcard"><div class="pcard-cov ${bannerClass(u)}" ${bannerStyle(u)}></div><div class="pcard-b">${av(u, 'av-lg')}
     <h3><button class="link" data-go="#/u/${u.id}">${esc(u.name)}</button></h3>
     <p class="small">${esc(u.headline)}</p><p class="small muted">${esc(meta(u))}</p>
     <div class="row"><span class="chip">${u.role === 'alumni' ? 'Alumni' : 'Student'}</span>${u.mentor ? '<span class="chip chip-a">Open to mentoring</span>' : ''}${u.verified ? `<span class="chip">${icon('check', 12)}${u.verified} verified</span>` : ''}</div>
-    ${S.people.path && u.path.length ? `<ol class="path">${u.path.map(m => `<li><i>${m.month.slice(0, 4)}</i> ${esc(m.title.length > 44 ? m.title.slice(0, 42) + '…' : m.title)}</li>`).join('')}</ol>` : ''}
+    ${S.people.path && u.path.length ? `<ol class="path">${u.path.map(m => `<li><i>${m.month.slice(0, 4)}</i>${esc(m.title.length > 46 ? m.title.slice(0, 44) + '…' : m.title)}</li>`).join('')}</ol>` : ''}
     <div class="acts">${chatBtn(u, u.relation, 'btn-sm')}<button class="btn btn-g btn-sm" data-go="#/u/${u.id}">View profile</button></div></div></article>`;
 }
 function chatBtn(u, rel, sm = '') {
@@ -361,8 +355,8 @@ async function viewProfile(id) {
   const counts = ['International', 'National', 'State', 'University', 'College'].map(l => [l, verAch.filter(m => m.level === l).length]).filter(x => x[1]);
   const link = location.origin + '/#/u/' + u.id;
   return `${why('profile')}<div class="pf"><div class="stack">
-    <section class="card pf-top"><div class="cover"><span>Register · ${esc(deptName(u.dept))} · admitted ${u.adm_year}</span></div>
-      <div class="pf-head">${av(u, 'av-xl')}
+    <section class="card pf-top"><div class="cover ${bannerClass(u)}" ${bannerStyle(u)}>${own ? `<button class="btn btn-sm edit" data-act="banner">${icon('gear', 14)}Edit banner</button>` : ''}</div>
+      <div class="pf-head"><div class="pf-av">${av(u, 'av-xl')}${own ? `<button class="cam" data-act="photo" aria-label="Change profile photo" title="Change profile photo">${icon('camera', 16)}</button>` : ''}</div>
         <h2 class="pf-name">${esc(u.name)}${verAch.length ? `<span class="st st-ok">${icon('shield', 13)}${verAch.length} verified achievements</span>` : ''}</h2>
         <p style="font-size:15px;margin-top:2px">${esc(u.headline)}</p>
         <p class="small muted" style="margin-top:4px">${esc(meta(u))}${u.location ? ' · ' + esc(u.location) : ''}${u.college_id ? ` · <span class="mono">${esc(u.college_id)}</span>` : ''}</p>
@@ -418,7 +412,7 @@ async function viewMessages(id) {
     const c = await api(`/api/chats/${Number(id)}/messages`);
     S.msg.last = c.messages.length ? c.messages[c.messages.length - 1].id : 0;
     const p = c.chat.partner;
-    pane = `<div class="pane-h"><button class="btn btn-g btn-sm" data-go="#/messages" aria-label="Back to chats">${icon('back', 16)}</button>${av(p)}
+    pane = `<div class="pane-h"><button class="btn btn-g btn-sm back" data-go="#/messages" aria-label="Back to chats">${icon('back', 16)}</button>${av(p)}
         <div><button class="link" data-go="#/u/${p.id}"><b>${esc(p.name)}</b></button><p class="small muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.headline)}</p></div>
         <button class="btn btn-g btn-sm" data-act="report" data-id="${p.id}" data-name="${esc(p.name)}">Report</button></div>
       <div class="thread" id="thread"><p class="note">Started from a ${esc(c.chat.purpose.toLowerCase())} request · ${fmtDay(c.chat.created_at)}. Contact details stay hidden unless you share them.</p>
@@ -476,7 +470,7 @@ async function viewVerify() {
       body = `<h2 style="font-size:19px">${esc(sel.reason)}</h2><p class="small">About <button class="link" data-go="#/u/${sel.person.id}"><b>${esc(sel.person.name)}</b></button>, reported by ${esc(sel.reporter)}.</p><p>${esc(sel.details)}</p>`;
     }
     const canNote = sel.type === 'milestone';
-    detail = `<div class="pane-h"><button class="btn btn-g btn-sm" data-act="vback" aria-label="Back to list">${icon('back', 16)}</button><div><b>${esc(label(sel))}</b></div>${pill(sel.status)}</div>
+    detail = `<div class="pane-h"><button class="btn btn-g btn-sm back" data-act="vback" aria-label="Back to list">${icon('back', 16)}</button><div><b>${esc(label(sel))}</b></div>${pill(sel.status)}</div>
       <div class="detail">${body}
       ${S.ver.mode ? `<div class="fld"><label for="v-note">${S.ver.mode === 'reject' ? 'Reason (they will see this)' : 'What do you need?'}</label><textarea id="v-note"></textarea></div>
         <div class="row"><button class="btn ${S.ver.mode === 'reject' ? 'btn-d' : 'btn-p'}" data-act="vdo" data-k="${S.ver.mode}">${S.ver.mode === 'reject' ? 'Reject' : 'Send request'}</button><button class="btn btn-g" data-act="vmode" data-k="">Cancel</button></div>`
@@ -597,6 +591,8 @@ async function viewSettings() {
         <div class="fld"><label for="s-mo">Since</label><input id="s-mo" type="month" max="${thisMonth()}" value="${thisMonth()}"></div>
         <p class="small muted">Keeping the same text confirms your status. A change goes to IQAC for approval first.</p>
         <button class="btn btn-p" type="submit">Update status</button></form></section>` : ''}
+      <section class="card"><div class="card-h"><h2>Photo and banner</h2></div>
+        <div class="row" style="gap:14px">${av(S.me, 'av-lg')}<div class="row"><button class="btn" data-act="photo">Change photo</button>${S.me.avatar_url ? '<button class="btn btn-g" data-act="rmphoto">Remove</button>' : ''}<button class="btn" data-act="banner">Change banner</button></div></div></section>
       <section class="card"><div class="card-h"><h2>Account</h2></div><p class="small">${esc(u.email)}</p><p class="small muted">${u.college_id ? 'Roll number ' + esc(u.college_id) : esc(u.scope || '')}</p></section>
     </div></div>`;
 }
@@ -629,6 +625,15 @@ function renderModal() {
       <p class="small">About ${esc(m.name)}</p>
       <div class="fld"><label for="r-why">Reason</label><select id="r-why"><option>An achievement looks wrong</option><option>Wrong batch or department</option><option>Fake profile</option><option>Inappropriate messages</option><option>Something else</option></select></div>
       <div class="fld"><label for="r-txt">Details</label><textarea id="r-txt" required maxlength="600"></textarea></div><p class="small muted">IQAC reviews every report. The person isn’t told who reported it.</p><p class="err" id="m-err" hidden></p></div>${foot('Send to IQAC')}</form>`;
+  if (m.type === 'banner') h = `<form data-form="banner">${head('Profile banner')}<div class="mb">
+      <div class="fld"><span class="small" style="font-weight:500">Pick a colour</span><div class="banners">${BANNERS.map(b => `<button type="button" class="bn-${b}" data-act="pickbanner" data-k="${b}" aria-pressed="${!S.me.banner_url && S.me.banner_preset === b}" aria-label="${b}"></button>`).join('')}</div></div>
+      <div class="divider">or</div>
+      <div class="fld"><label for="bn-file">Upload an image</label><input id="bn-file" type="file" accept=".png,.jpg,.jpeg,.webp"><small>Wide images work best, around 1500 × 400 px. PNG, JPG or WebP, under 4 MB.</small></div>
+      <p class="err" id="m-err" hidden></p></div>${foot('Save banner')}</form>`;
+  if (m.type === 'photo') h = `<form data-form="photo">${head('Profile photo')}<div class="mb">
+      <div class="row" style="gap:14px">${av(S.me, 'av-lg')}<p class="small muted">A clear photo of your face helps people recognise you. Square images work best.</p></div>
+      <div class="fld"><label for="ph-file">Choose a photo</label><input id="ph-file" type="file" accept=".png,.jpg,.jpeg,.webp" required><small>PNG, JPG or WebP, under 4 MB.</small></div>
+      <p class="err" id="m-err" hidden></p></div>${foot('Save photo')}</form>`;
   if (m.type === 'resubmit') h = `<form data-form="resubmit">${head('Reply and resend')}<div class="mb">
       <div class="fld"><label for="rs-d">Add the details the verifier asked for</label><textarea id="rs-d" required maxlength="600"></textarea></div><p class="err" id="m-err" hidden></p></div>${foot('Resend for verification')}</form>`;
   root.innerHTML = `<div class="ovl" data-act="close-bg"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt">${h}</div></div>`;
@@ -651,6 +656,10 @@ const ACT = {
   report(el) { openModal({ type: 'report', id: Number(el.dataset.id), name: el.dataset.name }); },
   resubmit(el) { openModal({ type: 'resubmit', id: Number(el.dataset.id) }); },
   async delms(el) { try { await api('/api/milestones/' + el.dataset.id, { method: 'DELETE' }); toast('Withdrawn'); rerender(); } catch (e) { toast(e.message); } },
+  banner() { openModal({ type: 'banner', preset: null }); },
+  photo() { openModal({ type: 'photo' }); },
+  pickbanner(el) { S.modal.preset = el.dataset.k; document.querySelectorAll('[data-act=pickbanner]').forEach(b => b.setAttribute('aria-pressed', b === el)); },
+  async rmphoto() { try { const r = await api('/api/me/image', { body: { kind: 'avatar', remove: true } }); S.me = r.user; toast('Photo removed'); rerender(); } catch (e) { toast(e.message); } },
   close: closeModal,
   'close-bg'(el, e) { if (e.target === el) closeModal(); },
   copy(el) { const t = el.dataset.t; (navigator.clipboard?.writeText(t) || Promise.reject()).then(() => toast('Profile link copied'), () => toast(t)); },
@@ -723,6 +732,15 @@ document.addEventListener('submit', async e => {
       } catch (err) { modalError(err); }
     } else if (kind === 'report') {
       try { await api('/api/reports', { body: { user_id: S.modal.id, reason: v('r-why'), details: v('r-txt') } }); closeModal(); toast('Sent to IQAC for review'); } catch (err) { modalError(err); }
+    } else if (kind === 'banner' || kind === 'photo') {
+      try {
+        const file = $(kind === 'banner' ? 'bn-file' : 'ph-file').files[0];
+        let body;
+        if (file) body = { kind: kind === 'banner' ? 'banner' : 'avatar', name: file.name, data: await readFile(file) };
+        else if (kind === 'banner' && S.modal.preset) body = { kind: 'banner', preset: S.modal.preset };
+        else throw new Error(kind === 'banner' ? 'Pick a colour or upload an image.' : 'Choose a photo first.');
+        const r = await api('/api/me/image', { body }); S.me = r.user; closeModal(); toast(kind === 'banner' ? 'Banner updated' : 'Photo updated'); rerender();
+      } catch (err) { modalError(err); }
     } else if (kind === 'resubmit') {
       try { await api(`/api/milestones/${S.modal.id}/resubmit`, { body: { description: v('rs-d') } }); closeModal(); toast('Sent for verification again'); rerender(); } catch (err) { modalError(err); }
     } else if (kind === 'profile') {

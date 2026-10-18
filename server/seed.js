@@ -177,6 +177,9 @@ q.tx(() => {
     for (const m of f.ms) addMilestone(id, m, m.admin ? admin : fac[f.dept]);
   }
 
+  for (const [n, b] of [['priya', 'navy'], ['ishita', 'teal'], ['ananya', 'slate'], ['kavya', 'forest'], ['meera', 'sand'], ['sneha', 'plum'], ['harshita', 'slate'], ['aditi', 'forest']])
+    q.run('UPDATE users SET banner = ? WHERE id = ?', 'preset:' + b, ids[n]);
+
   // Register: fictional synthetic records so counts, charts and reports have volume.
   let seed = 20261018;
   const R = () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };

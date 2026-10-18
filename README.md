@@ -23,10 +23,11 @@ Every demo account uses the password `demo1234`:
 
 To see live chat, log in as two people in two browsers (or one normal and one private window). Messages arrive within 3 seconds.
 
-The **Explain features** switch in the header shows, on every screen, how the feature helps students and how it helps the college. Use it when pitching. Turn it off for a clean demo.
+The **Feature notes** switch in the header adds a short note to each screen on how the feature helps students and the college. It is off by default; turn it on when pitching.
 
 ## What's in it
 
+- **Profile photo and banner.** Upload a photo, and upload a banner image or pick a plain colour (Settings, or the buttons on your profile).
 - **Profiles and journeys.** Year-by-year timeline (1st year, 2nd year, …, after college) with filters. Each item shows its level, proof, and who verified it and when. Other people see only verified items.
 - **Verification.** Students add milestones with a certificate (PDF/PNG/JPG, stored on the server) or a link. Each one goes to the department's faculty verifier automatically. Alumni items and status changes go to IQAC. Verifiers approve, ask for more info, or reject with a reason.
 - **People search.** Search by name, skill or achievement, filter by department and mentoring. Use **path filters** (cleared a competitive exam, went into research, working in tech, started a business, and so on) to see what each person did along the way.
