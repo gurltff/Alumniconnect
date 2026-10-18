@@ -1,0 +1,1095 @@
+<title>AlumniConnect</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap">
+<style>
+/* Layout: LinkedIn-style shell. Sticky top bar, 1128px column; profile = main + 300px rail; phone = bottom tab bar. */
+:root{
+  --bg:#f2f4f3; --surface:#fff; --surface-2:#eef2f0; --fg:#13201b; --fg-2:#43534c; --muted:#6b7a73;
+  --line:#dbe2df; --line-strong:#c2ccc8; --accent:#0d6b5f; --accent-hover:#0a564d; --accent-ink:#fff;
+  --accent-soft:#dff0ec; --accent-soft-ink:#0a4f46; --gold:#8f6206; --gold-soft:#f7eed8;
+  --ok:#157a3a; --ok-soft:#e2f3e7; --warn:#9a5600; --warn-soft:#fcefd9; --bad:#b8352a; --bad-soft:#fbe5e2;
+  --badge-bg:#c4382c; --badge-ink:#fff; --me:#0d6b5f; --me-ink:#fff; --them:#eef2f0;
+  --cover:#e3efeb; --cover-line:#cfe1db; --cover-margin:#e2a49a; --cover-ink:#3f6b62;
+  --cert-bg:#fffcf3; --cert-line:#d9c48c; --cert-ink:#4b3d15; --scrim:rgba(14,22,19,.45);
+  --tip-bg:#13201b; --tip-ink:#f2f4f3; --shadow:0 1px 2px rgba(19,32,27,.06),0 8px 24px rgba(19,32,27,.08);
+  --display:"Newsreader",Georgia,"Times New Roman",serif;
+  --body:"Hanken Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1412; --surface:#161d1a; --surface-2:#1c2521; --fg:#e5ece9; --fg-2:#b0beb8; --muted:#84928c;
+  --line:#29342f; --line-strong:#3a4741; --accent:#4db6a4; --accent-hover:#67c6b5; --accent-ink:#04201b;
+  --accent-soft:#173a33; --accent-soft-ink:#93dccd; --gold:#e2b552; --gold-soft:#372d14;
+  --ok:#55c97f; --ok-soft:#163222; --warn:#efaa4a; --warn-soft:#382912; --bad:#f08376; --bad-soft:#3b1d1a;
+  --badge-bg:#e5675b; --badge-ink:#1c0705; --me:#1f6e62; --me-ink:#ecfaf6; --them:#232d29;
+  --cover:#18302a; --cover-line:#20403a; --cover-margin:#7a4a44; --cover-ink:#8fc7bb;
+  --cert-bg:#26231a; --cert-line:#6d5b2c; --cert-ink:#eadfbb; --scrim:rgba(0,0,0,.6);
+  --tip-bg:#e5ece9; --tip-ink:#0e1412; --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1412; --surface:#161d1a; --surface-2:#1c2521; --fg:#e5ece9; --fg-2:#b0beb8; --muted:#84928c;
+  --line:#29342f; --line-strong:#3a4741; --accent:#4db6a4; --accent-hover:#67c6b5; --accent-ink:#04201b;
+  --accent-soft:#173a33; --accent-soft-ink:#93dccd; --gold:#e2b552; --gold-soft:#372d14;
+  --ok:#55c97f; --ok-soft:#163222; --warn:#efaa4a; --warn-soft:#382912; --bad:#f08376; --bad-soft:#3b1d1a;
+  --badge-bg:#e5675b; --badge-ink:#1c0705; --me:#1f6e62; --me-ink:#ecfaf6; --them:#232d29;
+  --cover:#18302a; --cover-line:#20403a; --cover-margin:#7a4a44; --cover-ink:#8fc7bb;
+  --cert-bg:#26231a; --cert-line:#6d5b2c; --cert-ink:#eadfbb; --scrim:rgba(0,0,0,.6);
+  --tip-bg:#e5ece9; --tip-ink:#0e1412; --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35); color-scheme:dark}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 var(--body)}
+[hidden]{display:none!important}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3{margin:0;text-wrap:balance} p{margin:0}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:60;background:var(--surface)}
+.gut{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1128px;margin:0 auto;width:100%}
+.muted{color:var(--muted)} .small{font-size:13px} .mono{font-family:var(--mono)}
+.h2{font:600 20px/1.25 var(--display)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.pad{padding:20px 24px}
+.stack{display:grid;gap:16px;min-width:0}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.between{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.ic{flex:none}
+/* buttons & chips */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:34px;padding:0 16px;border-radius:999px;border:1px solid var(--line-strong);background:var(--surface);color:var(--fg);font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--surface-2)}
+.btn-p{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn-p:hover{background:var(--accent-hover);border-color:var(--accent-hover)}
+.btn-o{border-color:var(--accent);color:var(--accent);background:transparent}
+.btn-o:hover{background:var(--accent-soft)}
+.btn-g{border-color:transparent;background:transparent;color:var(--fg-2)}
+.btn-g:hover{background:var(--surface-2)}
+.btn-d{border-color:var(--bad);color:var(--bad);background:transparent}
+.btn-sm{height:28px;padding:0 12px;font-size:13px}
+.btn[disabled]{opacity:.55;cursor:not-allowed}
+.link{border:0;background:none;padding:0;color:inherit;font:inherit;cursor:pointer;text-align:left}
+.link:hover{color:var(--accent);text-decoration:underline}
+.chip{display:inline-flex;align-items:center;gap:5px;min-height:24px;padding:0 9px;border-radius:999px;font-size:12.5px;font-weight:500;background:var(--surface-2);color:var(--fg-2);border:1px solid var(--line)}
+.chip-a{background:var(--accent-soft);color:var(--accent-soft-ink);border-color:transparent}
+.chip-g{background:var(--gold-soft);color:var(--gold);border-color:transparent}
+.fchip{cursor:pointer;height:30px;padding:0 12px;font-size:13px}
+.fchip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.st{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;font-weight:600;padding:2px 8px 2px 6px;border-radius:999px;white-space:nowrap}
+.st-ok{background:var(--ok-soft);color:var(--ok)} .st-warn{background:var(--warn-soft);color:var(--warn)} .st-bad{background:var(--bad-soft);color:var(--bad)}
+.lv{font:500 11px/1 var(--mono);letter-spacing:.04em;text-transform:uppercase;padding:4px 7px;border-radius:5px;border:1px solid var(--line-strong);color:var(--fg-2);white-space:nowrap}
+.lv-hi{border-color:var(--gold);color:var(--gold)}
+.av{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:600;font-size:14px;flex:none;background:var(--accent-soft);color:var(--accent-soft-ink)}
+.av.t2{background:var(--gold-soft);color:var(--gold)}
+.av-sm{width:32px;height:32px;font-size:12px} .av-lg{width:64px;height:64px;font-size:22px}
+.av-xl{width:120px;height:120px;font:600 40px/1 var(--display);border:4px solid var(--surface)}
+input[type=text],input[type=search],input[type=month],input[type=url],select,textarea{width:100%;min-height:38px;border:1px solid var(--line-strong);border-radius:8px;background:var(--surface);padding:6px 10px}
+textarea{min-height:90px;resize:vertical}
+.fld{display:grid;gap:6px} .fld label{font-size:13px;font-weight:600}
+/* top bar */
+.topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:50;background:var(--surface);border-bottom:1px solid var(--line)}
+.top-in{display:flex;align-items:center;gap:16px;height:60px}
+.brand{display:flex;align-items:center;gap:10px;border:0;background:none;padding:0;cursor:pointer;min-width:0;text-align:left}
+.crest{width:36px;height:36px;border-radius:9px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font:600 16px/1 var(--display);flex:none}
+.brand b{display:block;font:600 18px/1.1 var(--display)}
+.brand span{display:block;font-size:11.5px;color:var(--muted)}
+.nav{display:flex;gap:2px;margin-left:auto;height:60px}
+.nav button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:76px;padding:0 6px;border:0;border-bottom:2px solid transparent;background:none;color:var(--fg-2);font-size:12px;cursor:pointer;position:relative}
+.nav button:hover{color:var(--fg)}
+.nav button[aria-current="page"]{color:var(--fg);border-bottom-color:var(--fg)}
+.badge{position:absolute;top:6px;left:calc(50% + 4px);min-width:18px;height:18px;border-radius:9px;background:var(--badge-bg);color:var(--badge-ink);font-size:11px;font-weight:700;display:grid;place-items:center;padding:0 5px}
+.demo{background:var(--surface-2);border-bottom:1px solid var(--line);font-size:13px;color:var(--fg-2)}
+.demo-in{display:flex;align-items:center;gap:10px;min-height:42px;flex-wrap:wrap;padding-block:6px}
+.seg{display:inline-flex;border:1px solid var(--line-strong);border-radius:999px;overflow:hidden;background:var(--surface);max-width:100%;overflow-x:auto}
+.seg button{border:0;background:none;padding:4px 12px;font-size:12.5px;font-weight:600;color:var(--fg-2);cursor:pointer;white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.main{padding-block:24px 56px}
+/* landing */
+.land{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:40px;align-items:center;padding-block:48px 32px}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.hero-h{font:600 clamp(32px,4.4vw,50px)/1.08 var(--display);letter-spacing:-.015em;margin-top:12px}
+.hero-p{font-size:17px;color:var(--fg-2);margin-top:16px;max-width:56ch}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;padding-block:8px 32px}
+.stat{padding:16px 18px} .stat b{display:block;font-size:28px;font-weight:600} .stat span{font-size:13px;color:var(--muted)}
+.roles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:24px}
+.role{display:flex;gap:12px;align-items:center;text-align:left;padding:12px 14px;border:1px solid var(--line-strong);border-radius:10px;background:var(--surface);cursor:pointer}
+.role:hover{border-color:var(--accent);background:var(--accent-soft)}
+.role b{display:block;font-size:14px} .role span{display:block;font-size:12.5px;color:var(--muted)}
+/* people */
+.people{display:grid;grid-template-columns:260px minmax(0,1fr);gap:24px;align-items:start}
+.filters{display:grid;gap:14px;position:sticky;top:84px}
+.check{display:flex;gap:8px;align-items:center;font-size:14px;cursor:pointer}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px;margin-top:16px}
+.pcard{display:flex;flex-direction:column;overflow:hidden}
+.pcard-cov{height:52px;background-color:var(--cover);background-image:repeating-linear-gradient(to bottom,transparent 0 13px,var(--cover-line) 13px 14px)}
+.pcard-b{padding:0 16px 16px;display:flex;flex-direction:column;gap:6px;flex:1}
+.pcard-b .av{margin-top:-32px;border:3px solid var(--surface)}
+.pcard h3{font:600 18px/1.2 var(--display)}
+.pcard .acts{margin-top:auto;padding-top:8px;display:flex;gap:8px;flex-wrap:wrap}
+.path{list-style:none;margin:4px 0 0;padding:8px 10px;border-radius:8px;background:var(--surface-2);display:flex;flex-wrap:wrap;gap:3px 6px;font-size:12.5px;color:var(--fg-2)}
+.path li+li::before{content:"→";margin-right:6px;color:var(--muted)}
+.path i{font:normal 500 11px var(--mono);color:var(--accent)}
+/* profile */
+.pf{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:24px;align-items:start}
+.cover{height:150px;border-radius:10px 10px 0 0;position:relative;background-color:var(--cover);
+  background-image:repeating-linear-gradient(to bottom,transparent 0 27px,var(--cover-line) 27px 28px),
+  linear-gradient(to right,transparent 72px,var(--cover-margin) 72px 73.5px,transparent 73.5px 77px,var(--cover-margin) 77px 78.5px,transparent 78.5px)}
+.cover span{position:absolute;right:16px;bottom:10px;font:500 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--cover-ink)}
+.pf-head{padding:0 24px 24px}
+.pf-head .av-xl{margin-top:-64px}
+.pf-name{font:600 30px/1.15 var(--display);margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pf-line{font-size:16px;margin-top:4px}
+.pf-meta{color:var(--muted);font-size:14px;margin-top:4px}
+/* journey */
+.strip{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(108px,1fr);overflow-x:auto;margin-top:16px;border:1px solid var(--line);border-radius:10px}
+.seg-y{border:0;border-right:1px solid var(--line);background:none;text-align:left;padding:10px 12px;cursor:pointer;display:grid;gap:4px}
+.seg-y:last-child{border-right:0}
+.seg-y[aria-pressed="true"]{background:var(--accent-soft)}
+.seg-y b{font-size:13px} .seg-y small{font:12px var(--mono);color:var(--muted)}
+.dots{display:flex;gap:4px;flex-wrap:wrap;min-height:8px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--line-strong)}
+.dot.a{background:var(--accent)} .dot.p{background:transparent;border:1.5px solid var(--warn)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.jgroup{margin-top:18px}
+.jlab{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.jlab em{font:normal 12px var(--mono);letter-spacing:0;text-transform:none;margin-left:6px}
+.jlist{list-style:none;margin:0;padding:0;position:relative}
+.jlist::before{content:"";position:absolute;left:19px;top:10px;bottom:10px;width:2px;background:var(--line)}
+.jrow{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:12px;align-items:center;width:100%;text-align:left;background:none;border:0;padding:8px 0;cursor:pointer}
+.jrow:hover .jt{color:var(--accent)}
+.jico{width:40px;height:40px;border-radius:50%;background:var(--surface);border:1.5px solid var(--line-strong);display:grid;place-items:center;color:var(--fg-2);position:relative;z-index:1}
+.is-ach .jico{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.jt{font-weight:600;display:block} .js{color:var(--muted);font-size:13.5px;display:block}
+.jtags{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.jdet{margin:0 0 8px 52px;padding:14px 16px;border-radius:10px;background:var(--surface-2);display:grid;gap:12px}
+.proof{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.cert{width:120px;aspect-ratio:1.414/1;background:var(--cert-bg);border:1px solid var(--cert-line);border-radius:4px;display:grid;align-content:center;justify-items:center;gap:3px;text-align:center;padding:6px;box-shadow:inset 0 0 0 3px var(--cert-bg),inset 0 0 0 4px var(--cert-line)}
+.cert b{font:600 9px/1.1 var(--display);color:var(--cert-ink)} .cert span{font-size:7px;color:var(--cert-ink)} .cert i{width:16px;height:16px;border-radius:50%;background:var(--gold)}
+.meter{height:8px;border-radius:4px;background:var(--accent-soft);overflow:hidden} .meter span{display:block;height:100%;background:var(--accent);border-radius:4px}
+.tick{display:flex;gap:8px;align-items:flex-start;font-size:13.5px} .tick .ic{margin-top:2px}
+.tick.done{color:var(--muted)} .tick.done .ic{color:var(--ok)}
+/* messages */
+.msg{display:grid;grid-template-columns:330px minmax(0,1fr);height:min(720px,calc(100dvh - 190px));min-height:480px;overflow:hidden}
+.mlist{border-right:1px solid var(--line);overflow-y:auto;min-width:0}
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;border:0;border-bottom:2px solid transparent;background:none;padding:12px 8px;font-weight:600;cursor:pointer;color:var(--fg-2)}
+.tabs button[aria-pressed="true"]{color:var(--accent);border-bottom-color:var(--accent)}
+.conv{display:flex;gap:10px;width:100%;text-align:left;padding:12px 14px;border:0;border-bottom:1px solid var(--line);background:none;cursor:pointer}
+.conv:hover,.conv[aria-current="true"]{background:var(--surface-2)}
+.conv div{min-width:0;flex:1} .conv b{display:flex;justify-content:space-between;gap:8px;font-size:14px}
+.conv b small{font-weight:400;color:var(--muted);font-size:12px}
+.conv p{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.unread{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none;align-self:center}
+.req{padding:14px;border-bottom:1px solid var(--line);display:grid;gap:8px}
+.req q{font-size:13.5px;color:var(--fg-2);quotes:none}
+.pane{display:flex;flex-direction:column;min-width:0;min-height:0}
+.pane-h{display:flex;gap:10px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
+.pane-h div{flex:1;min-width:0}
+.thread{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.note{font-size:12.5px;color:var(--muted);text-align:center;padding:8px 12px;background:var(--surface-2);border-radius:8px}
+.bub{max-width:76%;padding:9px 13px;border-radius:16px;font-size:14.5px;line-height:1.45}
+.bub small{display:block;font-size:11px;opacity:.75;margin-top:3px}
+.bub.me{align-self:flex-end;background:var(--me);color:var(--me-ink);border-bottom-right-radius:4px}
+.bub.them{align-self:flex-start;background:var(--them);border-bottom-left-radius:4px}
+.compose{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line);align-items:flex-end}
+.compose textarea{min-height:40px;height:40px}
+.empty{display:grid;place-items:center;text-align:center;padding:40px;color:var(--muted);flex:1;gap:8px}
+/* verify + admin */
+.vq{display:grid;grid-template-columns:360px minmax(0,1fr);overflow:hidden;min-height:520px}
+.vitem{display:flex;gap:10px;width:100%;text-align:left;padding:12px 14px;border:0;border-bottom:1px solid var(--line);background:none;cursor:pointer}
+.vitem:hover,.vitem[aria-current="true"]{background:var(--surface-2)}
+.vitem div{min-width:0;flex:1} .vitem b{display:block;font-size:14px} .vitem p{font-size:13px;color:var(--fg-2)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.kpi{padding:14px 16px;text-align:left} .kpi span{font-size:13px;color:var(--muted)} .kpi b{display:block;font-size:28px;font-weight:600;line-height:1.2}
+button.kpi{cursor:pointer;font:inherit} button.kpi:hover{border-color:var(--accent)}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.hb{display:grid;grid-template-columns:130px minmax(0,1fr);gap:10px;align-items:center;min-height:30px;font-size:13.5px}
+.hb-t{display:flex;align-items:center;gap:8px}
+.hb-t i{display:block;height:16px;background:var(--accent);border-radius:0 4px 4px 0;min-width:2px}
+.hb-t span{font-size:12.5px;color:var(--fg-2);white-space:nowrap;font-variant-numeric:tabular-nums}
+.hb:hover i{background:var(--accent-hover)}
+.cols{display:flex;align-items:flex-end;gap:6px;height:180px;border-bottom:1px solid var(--line-strong);margin-top:12px;padding-top:20px}
+.col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;position:relative;min-width:0}
+.col i{display:block;width:min(24px,70%);background:var(--accent);border-radius:4px 4px 0 0}
+.col:hover i{background:var(--accent-hover)}
+.col span{font-size:12px;color:var(--fg-2);margin-bottom:4px;font-variant-numeric:tabular-nums}
+.col-l{display:flex;gap:6px;font-size:11.5px;color:var(--muted)} .col-l span{flex:1;text-align:center;min-width:0}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th{text-align:left;font-weight:600;color:var(--muted);background:var(--surface-2);padding:9px 12px;white-space:nowrap}
+td{padding:9px 12px;border-top:1px solid var(--line);vertical-align:top}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.atabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:20px;overflow-x:auto}
+.atabs button{border:0;border-bottom:2px solid transparent;background:none;padding:10px 14px;font-weight:600;color:var(--fg-2);cursor:pointer;white-space:nowrap}
+.atabs button[aria-pressed="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+/* modal, toast, tooltip */
+.ovl{position:fixed;inset:0;z-index:80;background:var(--scrim);display:grid;place-items:center;padding:24px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px))}
+.modal{background:var(--surface);border-radius:14px;width:min(540px,100%);max-height:calc(100dvh - 48px);overflow:auto;box-shadow:var(--shadow)}
+.mh{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--line)}
+.mb{padding:20px;display:grid;gap:14px} .mf{padding:14px 20px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));z-index:90;background:var(--tip-bg);color:var(--tip-ink);padding:10px 16px;border-radius:10px;font-size:14px;box-shadow:var(--shadow);max-width:calc(100% - 32px)}
+.tip{position:fixed;z-index:95;pointer-events:none;background:var(--tip-bg);color:var(--tip-ink);font-size:12.5px;padding:6px 9px;border-radius:6px;max-width:240px}
+@media (max-width:980px){.pf,.people{grid-template-columns:1fr}.filters{position:static}.land{grid-template-columns:1fr}.grid2{grid-template-columns:1fr}}
+@media (max-width:760px){
+  .brand span{display:none}
+  .nav{position:fixed;left:0;right:0;bottom:0;height:auto;margin:0;z-index:55;background:var(--surface);border-top:1px solid var(--line);padding:4px max(6px,env(safe-area-inset-right,0px)) calc(4px + env(safe-area-inset-bottom,0px)) max(6px,env(safe-area-inset-left,0px))}
+  .nav button{flex:1;min-width:0;height:54px;border-bottom:0;font-size:11px}
+  .nav button[aria-current="page"]{color:var(--accent)}
+  .main{padding-bottom:100px}
+  .toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}.roles{grid-template-columns:1fr}
+  .msg,.vq{grid-template-columns:1fr;height:auto;min-height:0}
+  .msg[data-open="1"] .mlist,.vq[data-open="1"] .vlist{display:none}
+  .msg:not([data-open="1"]) .pane,.vq:not([data-open="1"]) .vdet{display:none}
+  .mlist{border-right:0} .thread{min-height:50vh}
+  .jrow{grid-template-columns:40px minmax(0,1fr)} .jtags{grid-column:2;justify-content:flex-start}
+  .jdet{margin-left:0} .pf-head{padding:0 16px 20px} .pad{padding:16px}
+}
+</style>
+
+<div id="app"></div>
+<div id="modal"></div>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<div id="tip" class="tip" hidden></div>
+
+<script>
+(function(){
+'use strict';
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const fmtMonth = d => { const [y,m] = d.split('-').map(Number); return M[m-1]+' '+y; };
+const fmtDay = d => { const [y,m,dd] = d.split('-').map(Number); return dd+' '+M[m-1]+' '+y; };
+const ayStart = d => { const [y,m] = d.split('-').map(Number); return m >= 7 ? y : y-1; };
+const ayLabel = s => s+'–'+String(s+1).slice(2);
+const ord = n => ['','1st','2nd','3rd','4th'][n] || n+'th';
+const fmtN = n => n.toLocaleString('en-IN');
+const today = () => { const t = new Date(); return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0'); };
+const clock = () => new Date().toLocaleTimeString('en-IN',{hour:'numeric',minute:'2-digit'});
+const initials = n => n.replace(/^(Dr|Mr|Ms)\.\s*/,'').split(/\s+/).map(w => w[0]).slice(0,2).join('').toUpperCase();
+const first = n => n.replace(/^(Dr|Mr|Ms)\.\s*/,'').split(' ')[0];
+const hash = s => { let h = 0; for (const c of s) h = (h*31 + c.charCodeAt(0)) | 0; return Math.abs(h); };
+const CUR_AY = 2026;
+
+const P = {
+  home:'<path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+  users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.8c2 .7 3.2 2.5 3.5 5.2"/>',
+  message:'<path d="M5 4h14a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-9l-5 4v-4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/>',
+  shield:'<path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>',
+  chart:'<path d="M4 20V10M10 20V4M16 20v-7M2 20h20"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  check:'<path d="M5 12.5l4.5 4.5L19 7"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  x:'<path d="M6 6l12 12M18 6L6 18"/>',
+  link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
+  lock:'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
+  send:'<path d="M4 12l16-8-6 16-2.5-6.5zM11.5 13.5L20 4"/>',
+  back:'<path d="M19 12H5M11 6l-6 6 6 6"/>',
+  copy:'<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/>',
+  award:'<circle cx="12" cy="9" r="6"/><path d="M8.5 14l-1.5 7 5-3 5 3-1.5-7"/>',
+  flag:'<path d="M5 21V4h12l-2 4 2 4H5"/>',
+  cal:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  code:'<path d="M8 8l-4 4 4 4M16 8l4 4-4 4M13.5 6l-3 12"/>',
+  case:'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 13h18"/>',
+  cap:'<path d="M2 9l10-5 10 5-10 5z"/><path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5M22 9v6"/>',
+  book:'<path d="M5 4h14v15H7a2 2 0 0 0-2 2zM5 21V4"/>',
+  flask:'<path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3"/>',
+  rocket:'<path d="M5 15c-1.5 1.5-2 4-2 6 2 0 4.5-.5 6-2M9 15l-3-3c1-4 4.5-8.5 12-9 0 7.5-5 11-9 12z"/><circle cx="15" cy="9" r="1.5"/>',
+  heart:'<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+  file:'<path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5"/>',
+  chev:'<path d="M6 9l6 6 6-6"/>',
+  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/>',
+  out:'<path d="M9 4H5v16h4M14 8l4 4-4 4M18 12H8"/>'
+};
+const icon = (n, s = 20) => `<svg class="ic" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[n] || ''}</svg>`;
+
+/* ---------------- sample data (fictional) ---------------- */
+const DEPTS = {
+  PH:{name:'Physics',course:'B.Sc. (H) Physics',mod:'Dr. Vivek Arora',soc:'Physics Society'},
+  CH:{name:'Chemistry',course:'B.Sc. (H) Chemistry',mod:'Dr. Nisha Kulkarni',soc:'Chemistry Society'},
+  CS:{name:'Computer Science',course:'B.Sc. (H) Computer Science',mod:'Dr. Rekha Sinha',soc:'Coding Society'},
+  CM:{name:'Commerce',course:'B.Com (H)',mod:'Dr. Sunil Kapoor',soc:'Enactus'},
+  EC:{name:'Economics',course:'B.A. (H) Economics',mod:'Dr. Aparna Menon',soc:'Economics Society'},
+  EN:{name:'English',course:'B.A. (H) English',mod:'Dr. Ruth D’Souza',soc:'Literary Society'},
+  HI:{name:'History',course:'B.A. (H) History',mod:'Dr. Manoj Pathak',soc:'Heritage Club'},
+  PS:{name:'Political Science',course:'B.A. (H) Political Science',mod:'Dr. Kavita Rao',soc:'Debating Society'}
+};
+const mod = c => ({name:DEPTS[c].mod, role:'Department moderator, '+DEPTS[c].name});
+const coord = c => ({name:DEPTS[c].mod, role:'Faculty coordinator, '+DEPTS[c].soc});
+const IQ = {name:'Dr. Meenakshi Iyer', role:'IQAC coordinator'};
+const SPORTS = {name:'Mr. Rohit Malik', role:'Sports in-charge'};
+const ACH_KINDS = ['achievement','exam','research'];
+function I(id, date, kind, title, org, level, ver, x = {}){
+  const o = Object.assign({id, date, kind, title, org, level, ver, status:'verified', ach:ACH_KINDS.includes(kind),
+    verOn: date.slice(0,4) === '2026' && date >= '2026-10' ? date+'-15' : nextMonth(date)+'-0'+(1+hash(id)%8),
+    proof:{type:'cert', label:'Certificate'}}, x);
+  if (o.status !== 'verified') { o.verOn = null; o.ver = null; }
+  return o;
+}
+function nextMonth(d){ let [y,m] = d.split('-').map(Number); m++; if (m > 12) { m = 1; y++; } return y+'-'+String(m).padStart(2,'0'); }
+
+const PEOPLE = [
+ {id:'s-priya', name:'Priya Singh', role:'student', dept:'CS', adm:2024, cid:'24CS031', loc:'New Delhi', accepts:true,
+  headline:'Web developer · Joint Secretary, Coding Society', links:['GitHub','Portfolio'], skills:['JavaScript','React','Python','UI design'],
+  about:'Third-year Computer Science student who builds small tools that fix everyday campus problems. Looking for a winter internship in front-end development.',
+  items:[
+   I('p1','2024-08','society','Joined Coding Society','Coding Society','College',coord('CS'),{desc:'Selected through the society’s first-year coding test. Attended weekly DSA sessions.'}),
+   I('p2','2025-02','event','Tech team volunteer, annual college fest','Fest organising committee','College',{name:'Dr. Pallavi Chawla',role:'Convenor, fest committee'},{desc:'Built the registration page used by 1,900 visitors and ran on-site check-in.'}),
+   I('p3','2025-11','project','Built “FoundIt”, a lost-and-found web app for campus','Personal project','College',mod('CS'),{desc:'Students post lost or found items with photos. 300+ users in the first month.',proof:{type:'link',label:'Project repository on GitHub'}}),
+   I('p4','2026-03','achievement','1st prize, CodeSprint National Student Hackathon 2026','CodeSprint · off-campus','National',null,{cat:'tech',status:'pending',subOn:'2026-10-16',route:mod('CS'),desc:'Team of three. Built an offline-first attendance app for rural schools in 36 hours. 212 teams took part.',proof:{type:'cert',label:'Winner certificate (PDF)'}}),
+   I('p5','2026-06','internship','Front-end intern, Vice Chancellor Internship Scheme','University computer centre · 6 weeks',null,mod('CS'),{desc:'Rebuilt the online notice board so it works on phones.'}),
+   I('p6','2026-08','position','Joint Secretary, Coding Society','Coding Society','College',coord('CS'),{desc:'Runs the weekly practice contest and mentors 40 first-years.'})
+  ]},
+ {id:'s-harshita', name:'Harshita Rao', role:'student', dept:'CS', adm:2023, cid:'23CS005', loc:'New Delhi', accepts:true,
+  headline:'Machine learning · Smart India Hackathon 2025 finalist', skills:['Python','PyTorch','SQL'],
+  about:'Final-year student interested in applied machine learning for public services.',
+  items:[
+   I('h1','2023-09','society','Joined Coding Society','Coding Society','College',coord('CS')),
+   I('h2','2024-06','internship','Research intern, machine learning','Computer Science department · 8 weeks',null,mod('CS')),
+   I('h3','2025-12','achievement','Finalist, Smart India Hackathon 2025','Ministry of Education · off-campus','National',mod('CS'),{cat:'tech'}),
+   I('h4','2026-09','research','Paper accepted, national student research conference','Off-campus','National',null,{cat:'research',status:'pending',subOn:'2026-10-14',route:mod('CS')})
+  ]},
+ {id:'s-aditi', name:'Aditi Verma', role:'student', dept:'HI', adm:2024, cid:'24HI019', loc:'New Delhi', accepts:true,
+  headline:'Sprinter · Captain, college athletics team', skills:['400m','Event management'], about:'History student and national-level sprinter.',
+  items:[
+   I('d1','2024-08','society','Joined college athletics team','Sports committee','College',SPORTS),
+   I('d2','2025-02','achievement','Gold, 400m, inter-college athletics meet','Off-campus','University',SPORTS,{cat:'sports'}),
+   I('d3','2026-01','achievement','Gold, 400m, All India Inter-University Athletics Championship','Off-campus','National',SPORTS,{cat:'sports',proof:{type:'cert',label:'Medal certificate'}}),
+   I('d4','2026-07','position','Captain, college athletics team','Sports committee','College',SPORTS)
+  ]},
+ {id:'s-nandini', name:'Nandini Joshi', role:'student', dept:'CM', adm:2024, cid:'24CM088', loc:'New Delhi', accepts:true,
+  headline:'Enactus project lead · Marketing', skills:['Market research','Excel'], about:'Commerce student working on social enterprise projects.',
+  items:[
+   I('nj1','2024-08','society','Joined Enactus','Enactus','College',coord('CM')),
+   I('nj2','2025-12','project','Enactus “Kulhad” clay-cup project','Enactus','College',coord('CM'),{desc:'Helped 9 potter families sell clay cups to campus cafés.'}),
+   I('nj3','2026-09','achievement','Winner, national case-study competition','Business school fest · off-campus','National',null,{cat:'startup',status:'pending',subOn:'2026-10-12',route:mod('CM')})
+  ]},
+ {id:'a-ishita', name:'Ishita Bansal', role:'alumni', dept:'CS', adm:2020, grad:2023, cid:'20CS017', loc:'Bengaluru', accepts:true, mentor:true,
+  status:'Job', sector:'Tech', now:'Software Engineer II, Brightpath Labs', headline:'Software Engineer II at Brightpath Labs · GSoC 2022',
+  topics:['DSA & interviews','Open source / GSoC','Resume review'], skills:['Go','Java','Distributed systems','PostgreSQL'],
+  about:'Backend engineer on payments infrastructure. I got into open source through the Coding Society in second year. Happy to help juniors with GSoC, interviews and resumes.',
+  items:[
+   I('i1','2020-11','society','Joined Coding Society','Coding Society','College',coord('CS')),
+   I('i2','2022-02','achievement','1st prize, inter-college hackathon','Inter-college fest · off-campus','University',mod('CS'),{cat:'tech',desc:'Built a campus carpool app with two classmates in 24 hours.'}),
+   I('i3','2022-05','internship','Software engineering intern','Brightpath Labs · 8 weeks',null,mod('CS')),
+   I('i4','2022-08','position','President, Coding Society','Coding Society','College',coord('CS'),{desc:'Grew weekly contest participation from 30 to 120 students.'}),
+   I('i5','2022-09','achievement','Google Summer of Code 2022 contributor','Open-source organisation · remote','International',mod('CS'),{cat:'tech',desc:'Added offline sync to an open-source note-taking app. 14 pull requests merged.',proof:{type:'link',label:'GSoC project page'}}),
+   I('i6','2023-06','graduation','Graduated, B.Sc. (H) Computer Science','CGPA 8.9',null,IQ),
+   I('i7','2023-07','job','Software Engineer, Brightpath Labs','Bengaluru · campus placement',null,IQ),
+   I('i8','2025-04','job','Promoted to Software Engineer II','Brightpath Labs',null,IQ)
+  ]},
+ {id:'a-ananya', name:'Ananya Sharma', role:'alumni', dept:'PH', adm:2019, grad:2022, cid:'19PH008', loc:'New Delhi', accepts:true, mentor:true,
+  status:'Research', now:'PhD scholar (JRF), University of Delhi', headline:'PhD scholar in condensed matter physics · CSIR-NET JRF',
+  topics:['CSIR-NET prep','M.Sc. admissions','Research careers'], skills:['Thin films','Python','LaTeX'],
+  about:'I work on thin-film materials for solar cells. If you are curious about research, the summer fellowships in second year are the best first step.',
+  items:[
+   I('a1','2019-09','society','Joined Astronomy Club','Astronomy Club','College',coord('PH')),
+   I('a2','2021-02','event','Organised Science Week talks','Physics Society','College',coord('PH'),{desc:'Four scientists from national labs, 600 attendees.'}),
+   I('a3','2021-06','research','Summer Research Fellowship, national science academies','Off-campus · 8 weeks','National',mod('PH'),{cat:'research'}),
+   I('a4','2021-08','position','President, Physics Society','Physics Society','College',coord('PH')),
+   I('a5','2022-03','research','Paper presented, national conference on condensed matter physics','Off-campus','National',mod('PH'),{cat:'research'}),
+   I('a6','2022-06','graduation','Graduated, B.Sc. (H) Physics','First division with distinction',null,IQ),
+   I('a7','2022-07','study','M.Sc. Physics','University of Delhi · 2022–24',null,IQ),
+   I('a8','2023-12','exam','Cleared CSIR-NET JRF, All India Rank 41','CSIR-UGC NET','National',IQ,{cat:'exam',proof:{type:'cert',label:'Score card'}}),
+   I('a9','2024-08','phd','PhD scholar (JRF), Department of Physics','University of Delhi',null,IQ),
+   I('a10','2026-02','research','First-author paper in an international peer-reviewed journal','DOI linked','International',IQ,{cat:'research',proof:{type:'link',label:'Journal article (DOI)'}})
+  ]},
+ {id:'a-kavya', name:'Kavya Nair', role:'alumni', dept:'EC', adm:2018, grad:2021, cid:'18EC044', loc:'Mussoorie', accepts:true, mentor:true,
+  status:'Govt services', now:'Officer trainee, Civil Services', headline:'Civil Services Examination 2025, AIR 212',
+  topics:['UPSC strategy','Economics optional','Answer writing'], skills:['Public policy','Economics'],
+  about:'Cleared the Civil Services Examination in my third attempt. Debating in college did more for my interview than any coaching.',
+  items:[
+   I('k1','2018-09','society','NSS volunteer','NSS Unit','College',coord('EC')),
+   I('k2','2018-10','society','Joined Debating Society','Debating Society','College',coord('PS')),
+   I('k3','2020-02','achievement','1st prize, inter-college parliamentary debate','Inter-college fest · off-campus','University',mod('EC'),{cat:'cultural'}),
+   I('k4','2020-08','position','President, Debating Society','Debating Society','College',coord('PS')),
+   I('k5','2021-06','graduation','Graduated, B.A. (H) Economics','',null,IQ),
+   I('k6','2021-08','study','M.A. Economics','University of Delhi · 2021–23',null,IQ),
+   I('k7','2026-04','exam','Cleared UPSC Civil Services Examination 2025, AIR 212','Union Public Service Commission','National',IQ,{cat:'exam',proof:{type:'link',label:'Final result notice'}}),
+   I('k8','2026-09','job','Officer trainee, Civil Services','Training academy',null,IQ)
+  ]},
+ {id:'a-meera', name:'Meera Krishnan', role:'alumni', dept:'CM', adm:2015, grad:2018, cid:'15CM102', loc:'Jaipur', accepts:true, mentor:true,
+  status:'Entrepreneurship', now:'Founder, Threadloop', headline:'Founder, Threadloop · handloom fashion with artisan clusters',
+  topics:['Starting up','Fundraising','D2C brands'], skills:['Operations','Fundraising'],
+  about:'Threadloop brings handloom work from Rajasthan’s artisan clusters to online buyers. I hire interns from college every winter.',
+  items:[
+   I('m1','2015-08','society','Joined Enactus','Enactus','College',coord('CM')),
+   I('m2','2016-09','project','Project lead, Enactus “Bunkar” handloom project','Enactus','College',coord('CM')),
+   I('m3','2017-03','achievement','Runner-up, Enactus India National Exposition','Enactus India · off-campus','National',mod('CM'),{cat:'startup'}),
+   I('m4','2018-06','graduation','Graduated, B.Com (H)','',null,IQ),
+   I('m5','2018-07','job','Analyst, Kestrel Advisory','Gurugram',null,IQ),
+   I('m6','2021-03','startup','Founded Threadloop','Jaipur · 40 artisans',null,IQ),
+   I('m7','2025-11','achievement','Threadloop selected for a national startup seed fund','Government-recognised incubator','National',IQ,{cat:'startup'})
+  ]},
+ {id:'a-sneha', name:'Sneha Gupta', role:'alumni', dept:'CH', adm:2016, grad:2019, cid:'16CH021', loc:'Toronto, Canada', accepts:true, mentor:true,
+  status:'Higher studies', now:'PhD candidate, University of Toronto', headline:'PhD candidate in green chemistry, University of Toronto',
+  topics:['Applying abroad','SOPs','Research interviews'], skills:['Organic synthesis','Catalysis'],
+  about:'Happy to talk about applying for funded PhDs abroad.',
+  items:[
+   I('n1','2016-09','society','Joined Chemistry Society','Chemistry Society','College',coord('CH')),
+   I('n2','2018-06','internship','Summer research intern','Green chemistry lab · 8 weeks',null,mod('CH')),
+   I('n3','2019-02','research','Poster, national symposium on green chemistry','Off-campus','National',mod('CH'),{cat:'research'}),
+   I('n4','2019-06','graduation','Graduated, B.Sc. (H) Chemistry','',null,IQ),
+   I('n5','2021-03','exam','Qualified GATE Chemistry, AIR 156','GATE 2021','National',IQ,{cat:'exam'}),
+   I('n6','2021-09','phd','PhD, Department of Chemistry','University of Toronto · fully funded',null,IQ)
+  ]},
+ {id:'a-tanvi', name:'Tanvi Arora', role:'alumni', dept:'EN', adm:2019, grad:2022, cid:'19EN012', loc:'New Delhi', accepts:false, mentor:false,
+  status:'Job', sector:'Media', now:'Correspondent, The Delhi Chronicle', headline:'Correspondent, The Delhi Chronicle', skills:['Reporting','Editing'], about:'',
+  items:[
+   I('t1','2019-09','society','Joined Literary Society','Literary Society','College',coord('EN')),
+   I('t2','2021-01','achievement','1st prize, inter-college creative writing','Inter-college fest · off-campus','University',mod('EN'),{cat:'cultural'}),
+   I('t3','2021-08','position','Editor, college magazine','College magazine','College',mod('EN')),
+   I('t4','2022-06','graduation','Graduated, B.A. (H) English','',null,IQ),
+   I('t5','2023-01','job','Correspondent, The Delhi Chronicle','New Delhi',null,IQ)
+  ]}
+];
+const STAFF = {
+  'f-rekha':{id:'f-rekha', name:'Dr. Rekha Sinha', role:'faculty', headline:'Department moderator, Computer Science · Coding Society coordinator'},
+  'f-iqac':{id:'f-iqac', name:'Dr. Meenakshi Iyer', role:'admin', headline:'IQAC coordinator'}
+};
+const BY_ID = {}; PEOPLE.forEach(p => { BY_ID[p.id] = p; p.items.forEach(i => i.personId = p.id); });
+const get = id => BY_ID[id] || STAFF[id];
+
+/* Sample register: fictional records used for the admin counts, charts and reports. */
+function rng(seed){ return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const R = rng(20261018);
+const wpick = (items, w) => { let r = R() * w.reduce((a,b) => a+b, 0); for (let i = 0; i < items.length; i++) { r -= w[i]; if (r < 0) return items[i]; } return items[items.length-1]; };
+const FN = ['Aarushi','Akanksha','Anjali','Anushka','Bhavya','Charu','Deepika','Diya','Gauri','Ishani','Jahnavi','Khushi','Kritika','Lavanya','Mansi','Megha','Muskan','Neha','Nikita','Pallavi','Prachi','Radhika','Ritika','Sanya','Shreya','Shruti','Simran','Srishti','Tanya','Vaishnavi','Vanshika','Zoya'];
+const LN = ['Agarwal','Bhatia','Chauhan','Chopra','Garg','Iyer','Jain','Kapoor','Kaur','Khan','Malhotra','Mishra','Nair','Negi','Pandey','Rawat','Reddy','Saxena','Sethi','Sharma','Singh','Srivastava','Tiwari','Verma'];
+const LEVELS = ['College','University','State','National','International'];
+const OUTCOMES = ['Job','Higher studies','Research','Govt services','Entrepreneurship','Not reported'];
+const ACH_T = {College:['1st prize, college debate','NSS: 240 hours of community service','Winner, college coding contest'],
+  University:['Gold medal, inter-college athletics meet','1st prize, inter-college quiz','Runner-up, inter-college hackathon'],
+  State:['Winner, state youth parliament','Gold, state athletics championship'],
+  National:['Finalist, Smart India Hackathon','Paper presented, national conference','Qualified IIT JAM','Cleared GATE'],
+  International:['Google Summer of Code contributor','Paper in international journal']};
+const DCODES = Object.keys(DEPTS);
+const REG = []; const SACH = [];
+let seq = 100;
+for (let g = 2015; g <= 2026; g++) {
+  const n = 70 + (g-2015)*8;
+  for (let k = 0; k < n; k++) {
+    const dept = wpick(DCODES,[8,7,9,14,10,9,8,8]);
+    const r = {name:FN[Math.floor(R()*FN.length)]+' '+LN[Math.floor(R()*LN.length)], role:'alumni', dept, adm:g-3, grad:g,
+      cid:String(g-3).slice(2)+dept+(++seq), outcome:wpick(OUTCOMES,[44,22,7,9,4,14]), mentor:g <= 2024 && R() < .09,
+      record:R() < .06 ? 'Needs update' : 'Verified', active:R() < .32};
+    r.reqs = r.mentor ? 2+Math.floor(R()*12) : 0;
+    REG.push(r);
+    const na = wpick([0,1,2,3],[40,33,18,9]);
+    for (let a = 0; a < na; a++) addSach(r, r.adm + Math.floor(R()*3));
+  }
+}
+for (const [adm, n] of [[2023,300],[2024,860],[2025,880],[2026,900]]) {
+  for (let k = 0; k < n; k++) {
+    const dept = wpick(DCODES,[8,7,9,14,10,9,8,8]);
+    const r = {name:FN[Math.floor(R()*FN.length)]+' '+LN[Math.floor(R()*LN.length)], role:'student', dept, adm,
+      cid:String(adm).slice(2)+dept+(++seq), record:'Verified', active:R() < .7};
+    REG.push(r);
+    const na = adm === 2026 ? 0 : wpick([0,1,2,3],[48,30,15,7]);
+    for (let a = 0; a < na; a++) addSach(r, adm + Math.floor(R()*(CUR_AY-adm)));
+  }
+}
+function addSach(r, ay){
+  const level = wpick(LEVELS,[30,31,8,26,5]); const m = wpick([9,11,1,2,3],[1,1,1,1,1]);
+  const y = m >= 7 ? ay : ay+1;
+  SACH.push({cid:r.cid, name:r.name, dept:r.dept, level, title:ACH_T[level][Math.floor(R()*ACH_T[level].length)],
+    date:y+'-'+String(m).padStart(2,'0'), status:R() < .97 ? 'verified' : 'rejected', ver:mod(r.dept).name});
+}
+PEOPLE.forEach(p => REG.push({name:p.name, role:p.role, dept:p.dept, adm:p.adm, grad:p.grad, cid:p.cid, outcome:p.role==='alumni'?(p.status==='Job'?'Job':p.status):undefined,
+  mentor:!!p.mentor, record:'Verified', active:true, reqs:p.mentor?10:0, featured:p.id}));
+
+/* chat + verification state */
+const REQS = [
+  {id:'q1', from:'a-meera', to:'s-priya', purpose:'Internship / referral', on:'2026-10-17', status:'pending',
+   note:'Hi Priya, I’m a 2018 B.Com graduate and run Threadloop. We need a front-end intern for 8 weeks this winter, and your FoundIt project is close to what we need. Interested?'},
+  {id:'q2', from:'s-priya', to:'a-sneha', purpose:'Higher studies advice', on:'2026-10-15', status:'pending',
+   note:'Hi Sneha di, I’m a 3rd-year CS student thinking about an MS abroad. Could I ask you about the application timeline?'},
+  {id:'q3', from:'s-harshita', to:'a-ishita', purpose:'Resume review', on:'2026-10-16', status:'pending',
+   note:'Hi Ishita di! I’m a final-year CS student and SIH 2025 finalist, applying for backend roles. Could you review my resume?'}
+];
+const CHATS = [
+  {id:'c1', a:'s-priya', b:'a-ishita', purpose:'Mentorship', started:'2026-10-02', unread:{'s-priya':true}, msgs:[
+    {from:'s-priya', text:'Hi Ishita di! I saw you went from Coding Society to GSoC. I want to apply next year. How did you pick an organisation?', at:'2 Oct, 7:12 pm'},
+    {from:'a-ishita', text:'Hi Priya! Fix small issues in 2–3 projects you already use. Pick the one where maintainers reply fastest and stick with it.', at:'2 Oct, 9:40 pm'},
+    {from:'s-priya', text:'That makes sense. Could you look at my resume sometime?', at:'3 Oct, 8:05 am'},
+    {from:'a-ishita', text:'Sure, send it this weekend. Also, congrats on the hackathon! Get it verified so it shows on your profile.', at:'Yesterday, 6:30 pm'}
+  ]}
+];
+const QUEUE = [];
+PEOPLE.forEach(p => p.items.filter(i => i.status === 'pending').forEach(i => QUEUE.push({id:'v'+QUEUE.length, kind:'achievement', personId:p.id, item:i, route:i.route, on:i.subOn, status:'pending'})));
+QUEUE.push({id:'v'+QUEUE.length, kind:'registration', route:IQ, on:'2026-10-15', status:'pending',
+  data:{name:'Simran Kaur', role:'Alumni', course:'B.Sc. (H) Chemistry', batch:'2016–19', email:'simran.kaur@example.com'}, match:'Name and roll number match the 2019 Chemistry register.'});
+const AUDIT = [
+  {at:'18 Oct 2026, 10:05 am', who:'Dr. Meenakshi Iyer', what:'Exported NAAC student progression report, batch 2026'},
+  {at:'17 Oct 2026, 4:12 pm', who:'Mr. Rohit Malik', what:'Approved “Gold, state athletics championship”'},
+  {at:'16 Oct 2026, 11:30 am', who:'Dr. Meenakshi Iyer', what:'Imported 42 records from the 2016 Chemistry register'}
+];
+
+/* ---------------- app state ---------------- */
+const DEMO = {student:'s-priya', alumni:'a-ishita', faculty:'f-rekha', admin:'f-iqac'};
+const ROLE_NAME = {student:'Student', alumni:'Alumni', faculty:'Faculty verifier', admin:'IQAC admin'};
+const S = {me:null, role:null, view:'people', prof:null, back:'people',
+  pq:'', pwho:'all', pdept:'', pmentor:false, path:'', jf:'all', jph:'', open:new Set(),
+  mtab:'chats', chat:null, vsel:null, vmode:null, atab:'overview', adept:'', rtype:'progression', ryear:'2026', modal:null};
+
+/* ---------------- helpers ---------------- */
+const av = (p, cls = '') => `<span class="av ${hash(p.id||p.name)%2?'t2':''} ${cls}" aria-hidden="true">${esc(initials(p.name))}</span>`;
+const lvl = l => l ? `<span class="lv ${l==='National'||l==='International'?'lv-hi':''}">${esc(l)}</span>` : '';
+function stPill(s){
+  if (s === 'verified') return `<span class="st st-ok">${icon('check',14)}Verified</span>`;
+  if (s === 'pending') return `<span class="st st-warn">${icon('clock',14)}Pending</span>`;
+  if (s === 'info') return `<span class="st st-warn">${icon('info',14)}Info requested</span>`;
+  return `<span class="st st-bad">${icon('x',14)}Not verified</span>`;
+}
+function meta(p){
+  const d = DEPTS[p.dept];
+  return p.role === 'alumni' ? `${d.course} · Class of ${p.grad}` : `${d.course} · ${ord(CUR_AY-p.adm+1)} year`;
+}
+const verifiedAch = p => p.items.filter(i => i.ach && i.status === 'verified');
+const KIND_ICON = {society:'users',position:'flag',event:'cal',project:'code',internship:'case',achievement:'award',exam:'book',research:'flask',graduation:'cap',study:'cap',phd:'flask',job:'case',startup:'rocket'};
+const KIND_LABEL = {society:'Society',position:'Position held',event:'Event',project:'Project',internship:'Internship',achievement:'Achievement',exam:'Competitive exam',research:'Research',graduation:'Graduation',study:'Higher studies',phd:'Research role',job:'Job',startup:'Startup'};
+function phase(p, i){
+  if (i.kind === 'graduation' || (p.role === 'alumni' && i.date > p.grad+'-06')) return {k:'after', label:'After college', order:9};
+  const y = ayStart(i.date) - p.adm + 1;
+  return {k:'y'+y, label:ord(y)+' year', yr:ayLabel(p.adm+y-1), order:y};
+}
+function phases(p){
+  const n = p.role === 'alumni' ? p.grad - p.adm : CUR_AY - p.adm + 1;
+  const list = []; for (let y = 1; y <= n; y++) list.push({k:'y'+y, label:ord(y)+' year', yr:ayLabel(p.adm+y-1), order:y});
+  if (p.role === 'alumni') list.push({k:'after', label:'After college', yr:'since '+p.grad, order:9});
+  return list;
+}
+function relation(a, b){
+  const chat = CHATS.find(c => (c.a===a && c.b===b) || (c.a===b && c.b===a)); if (chat) return {k:'chat', chat};
+  const sent = REQS.find(r => r.from===a && r.to===b && r.status==='pending'); if (sent) return {k:'sent', r:sent};
+  const recv = REQS.find(r => r.from===b && r.to===a && r.status==='pending'); if (recv) return {k:'recv', r:recv};
+  return {k:'none'};
+}
+function chatBtn(id, sm = ''){
+  if (id === S.me) return '';
+  const rel = relation(S.me, id), p = get(id);
+  if (rel.k === 'chat') return `<button class="btn btn-p ${sm}" data-act="chat" data-id="${rel.chat.id}">${icon('message',16)}Message</button>`;
+  if (rel.k === 'sent') return `<button class="btn ${sm}" disabled>${icon('clock',16)}Request sent</button>`;
+  if (rel.k === 'recv') return `<button class="btn btn-p ${sm}" data-act="requests">${icon('message',16)}Reply to request</button>`;
+  if (!p.accepts) return `<button class="btn ${sm}" disabled>Not taking requests</button>`;
+  return `<button class="btn btn-o ${sm}" data-act="ask" data-id="${id}">${icon('send',16)}Request to chat</button>`;
+}
+function pathLine(p){
+  const its = p.items.filter(i => i.status === 'verified' && i.kind !== 'graduation' && (i.ach || ['position','internship','job','startup','phd','study'].includes(i.kind)));
+  const col = its.filter(i => phase(p,i).k !== 'after').slice(-3);
+  const aft = its.filter(i => phase(p,i).k === 'after').slice(-1);
+  return `<ol class="path">${[...col, ...aft].map(i => { const ph = phase(p,i); return `<li><i>${ph.k==='after' ? i.date.slice(0,4) : 'Y'+ph.order}</i> ${esc(i.title.length > 46 ? i.title.slice(0,44)+'…' : i.title)}</li>`; }).join('')}</ol>`;
+}
+const PATHS = [
+  {k:'exam', label:'Cleared a competitive exam', t:p => p.items.some(i => i.kind==='exam' && i.status==='verified')},
+  {k:'research', label:'Went into research', t:p => p.status==='Research' || p.items.some(i => i.kind==='research' && i.status==='verified')},
+  {k:'abroad', label:'Higher studies', t:p => p.status==='Higher studies' || p.items.some(i => i.kind==='study')},
+  {k:'tech', label:'Working in tech', t:p => p.sector==='Tech'},
+  {k:'govt', label:'Government services', t:p => p.status==='Govt services'},
+  {k:'startup', label:'Started a business', t:p => p.status==='Entrepreneurship'},
+  {k:'sports', label:'National-level sports', t:p => p.items.some(i => i.cat==='sports' && (i.level==='National'||i.level==='International'))}
+];
+let toastT;
+function toast(msg){ const t = document.getElementById('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { t.hidden = true; }, 3400); }
+function audit(what){ AUDIT.unshift({at:new Date().toLocaleString('en-IN',{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'}), who:get(S.me).name, what}); }
+function myQueue(){ return QUEUE.filter(q => (q.status==='pending'||q.status==='info') && (S.role==='admin' || q.route.name===get(S.me).name)); }
+function unreadCount(){ return CHATS.filter(c => c.unread[S.me]).length + REQS.filter(r => r.to===S.me && r.status==='pending').length; }
+
+/* ---------------- views ---------------- */
+function render(){
+  document.getElementById('app').innerHTML = S.me ? shell() : landing();
+  renderModal();
+}
+function landing(){
+  const alumni = REG.filter(r => r.role==='alumni').length;
+  const ver = SACH.filter(a => a.status==='verified').length + PEOPLE.reduce((n,p) => n + verifiedAch(p).length, 0);
+  const active = REG.filter(r => r.active).length, mentors = REG.filter(r => r.mentor).length;
+  const acc = [
+    ['student','Priya Singh','Student · 3rd year, Computer Science'],
+    ['alumni','Ishita Bansal','Alumni · Software Engineer, class of 2023'],
+    ['faculty','Dr. Rekha Sinha','Faculty verifier · Computer Science'],
+    ['admin','Dr. Meenakshi Iyer','IQAC admin · records, reports, analytics']];
+  return `<header class="topbar"><div class="gut"><div class="wrap top-in">${brand()}</div></div></header>
+  <main class="gut"><div class="wrap">
+    <section class="land">
+      <div>
+        <p class="eyebrow">Your College Name · Alumni &amp; Achievement Network</p>
+        <h1 class="hero-h">Every achievement checked by the college. Every senior one request away.</h1>
+        <p class="hero-p">Students and alumni keep one profile that grows from first year to career. Faculty verify each milestone. Anyone in the college can search a journey and ask its owner for guidance.</p>
+        <div class="roles">${acc.map(([r,n,d]) => `<button class="role" data-act="login" data-role="${r}">${av({id:DEMO[r],name:n})}<div><b>Log in as ${esc(n)}</b><span>${esc(d)}</span></div></button>`).join('')}</div>
+        <p class="muted small" style="margin-top:12px">Prototype with fictional sample data. Pick an account to explore.</p>
+      </div>
+      <div class="card pad stack">${miniJourney(BY_ID['a-ananya'])}</div>
+    </section>
+    <section class="stats">
+      ${[['Total alumni',alumni],['Verified achievements',ver],['Active members (90 days)',active],['Alumni mentors',mentors]].map(([l,v]) => `<div class="card stat"><b>${fmtN(v)}</b><span>${l}</span></div>`).join('')}
+    </section>
+  </div></main>`;
+}
+function miniJourney(p){
+  const its = p.items.filter(i => i.ach || ['position','phd'].includes(i.kind)).slice(-5);
+  return `<div class="row">${av(p,'av-lg')}<div><b style="font:600 20px/1.2 var(--display)">${esc(p.name)}</b><p class="muted small">${esc(p.headline)}</p></div></div>
+    <ol class="jlist">${its.map(i => `<li class="${i.ach?'is-ach':''}"><div class="jrow" style="cursor:default"><span class="jico">${icon(KIND_ICON[i.kind],18)}</span><span><span class="jt">${esc(i.title)}</span><span class="js">${phase(p,i).label} · ${fmtMonth(i.date)}</span></span><span class="jtags">${stPill(i.status)}</span></div></li>`).join('')}</ol>`;
+}
+function brand(){ return `<button class="brand" data-act="${S.me?'home':'noop'}"><span class="crest">AC</span><span><b>AlumniConnect</b><span>Your College Name</span></span></button>`; }
+function navItems(){
+  const r = S.role;
+  const items = [];
+  if (r === 'admin') items.push(['admin','Dashboard','chart']);
+  if (r === 'admin' || r === 'faculty') items.push(['verify','Verify','shield']);
+  items.push(['people','People','users'], ['messages','Messages','message']);
+  if (r === 'student' || r === 'alumni') items.push(['me','My profile','user']);
+  return items;
+}
+function shell(){
+  const cur = S.view === 'profile' && S.prof === S.me ? 'me' : S.view;
+  const badge = k => { const n = k==='messages' ? unreadCount() : k==='verify' ? myQueue().length : 0; return n ? `<span class="badge">${n}</span>` : ''; };
+  const views = {people:viewPeople, profile:viewProfile, messages:viewMessages, verify:viewVerify, admin:viewAdmin};
+  return `<header class="topbar"><div class="gut"><div class="wrap top-in">${brand()}
+    <nav class="nav" aria-label="Main">${navItems().map(([k,l,ic]) => `<button data-act="nav" data-v="${k}" ${cur===k?'aria-current="page"':''}>${icon(ic,22)}<span>${l}</span>${badge(k)}</button>`).join('')}</nav>
+  </div></div></header>
+  <div class="demo gut"><div class="wrap demo-in"><span>Prototype · viewing as</span>
+    <div class="seg" role="group" aria-label="Switch demo account">${Object.keys(DEMO).map(r => `<button data-act="login" data-role="${r}" aria-pressed="${S.role===r}">${ROLE_NAME[r]}</button>`).join('')}</div>
+    <span class="muted">${esc(get(S.me).name)}</span>
+    <button class="btn btn-g btn-sm" data-act="logout" style="margin-left:auto">${icon('out',16)}Log out</button></div></div>
+  <main class="main gut"><div class="wrap">${views[S.view]()}</div></main>`;
+}
+
+/* people search */
+function viewPeople(){
+  const opt = (v, l, cur) => `<option value="${v}" ${cur===v?'selected':''}>${l}</option>`;
+  return `<div class="people">
+    <aside class="card pad filters">
+      <div class="fld"><label for="pq">Search</label><input id="pq" type="search" data-m="pq" value="${esc(S.pq)}" placeholder="Name, company, skill, achievement"></div>
+      <div class="fld"><label for="pwho">Show</label><select id="pwho" data-m="pwho">${opt('all','Everyone',S.pwho)}${opt('alumni','Alumni',S.pwho)}${opt('student','Students',S.pwho)}</select></div>
+      <div class="fld"><label for="pdept">Department</label><select id="pdept" data-m="pdept">${opt('','All departments',S.pdept)}${Object.entries(DEPTS).map(([k,d]) => opt(k,d.name,S.pdept)).join('')}</select></div>
+      <label class="check"><input type="checkbox" id="pmentor" data-m="pmentor" ${S.pmentor?'checked':''}> Open to mentoring</label>
+    </aside>
+    <section id="presults" class="stack">${peopleResults()}</section>
+  </div>`;
+}
+function peopleResults(){
+  const q = S.pq.trim().toLowerCase(); const path = PATHS.find(x => x.k === S.path);
+  const list = PEOPLE.filter(p => p.id !== S.me
+    && (S.pwho === 'all' || p.role === S.pwho) && (!S.pdept || p.dept === S.pdept) && (!S.pmentor || p.mentor)
+    && (!path || path.t(p))
+    && (!q || [p.name, p.headline, p.now, DEPTS[p.dept].name, ...(p.skills||[]), ...p.items.map(i => i.title)].join(' ').toLowerCase().includes(q)));
+  return `<div class="card pad">
+      <h2 class="h2">Find people by the path they took</h2>
+      <p class="muted small" style="margin-top:4px">Pick an outcome to see who got there and what they did in college.</p>
+      <div class="row" style="margin-top:12px">${PATHS.map(x => `<button class="chip fchip" data-act="path" data-k="${x.k}" aria-pressed="${S.path===x.k}">${esc(x.label)}</button>`).join('')}</div>
+    </div>
+    <p class="muted small">${list.length} ${list.length===1?'person':'people'}${path ? ' took this path' : ''} · only college-verified milestones are shown</p>
+    ${list.length ? `<div class="pgrid" style="margin-top:0">${list.map(personCard).join('')}</div>`
+      : `<div class="card empty">${icon('search',28)}<p>No one matches yet. Try another department or clear the search.</p></div>`}`;
+}
+function personCard(p){
+  const n = verifiedAch(p).length;
+  return `<article class="card pcard"><div class="pcard-cov"></div><div class="pcard-b">
+    ${av(p,'av-lg')}
+    <h3><button class="link" data-act="profile" data-id="${p.id}">${esc(p.name)}</button></h3>
+    <p class="small">${esc(p.headline)}</p>
+    <p class="muted small">${esc(meta(p))}</p>
+    <div class="row">${p.role==='alumni'?'<span class="chip">Alumni</span>':'<span class="chip">Student</span>'}${p.mentor?'<span class="chip chip-a">Open to mentoring</span>':''}${n?`<span class="chip">${icon('check',13)}${n} verified</span>`:''}</div>
+    ${S.path ? pathLine(p) : ''}
+    <div class="acts">${chatBtn(p.id,'btn-sm')}<button class="btn btn-g btn-sm" data-act="profile" data-id="${p.id}">View profile</button></div>
+  </div></article>`;
+}
+
+/* profile */
+function viewProfile(){
+  const p = get(S.prof), own = p.id === S.me, admin = S.role === 'admin';
+  const d = DEPTS[p.dept], all = own || admin;
+  let items = p.items.slice().sort((a,b) => a.date.localeCompare(b.date));
+  if (!all) items = items.filter(i => i.status === 'verified');
+  const groups = {all:() => true, ach:i => i.ach, campus:i => ['society','position','event'].includes(i.kind), work:i => ['project','internship','job','startup'].includes(i.kind), edu:i => ['graduation','study','phd'].includes(i.kind)};
+  const shown = items.filter(groups[S.jf]).filter(i => !S.jph || phase(p,i).k === S.jph);
+  const phs = phases(p);
+  const counts = LEVELS.map(l => [l, verifiedAch(p).filter(i => i.level===l).length]).filter(x => x[1]);
+  const link = 'alumniconnect.yourcollege.edu/u/'+p.name.toLowerCase().replace(/\s+/g,'-');
+  const strength = [['Add an About section',!!p.about],['Get 3 milestones verified',p.items.filter(i => i.status==='verified').length>=3],['Get an achievement verified',verifiedAch(p).length>0],['Link GitHub or a portfolio',(p.links||[]).length>0],['Add at least 3 skills',(p.skills||[]).length>=3]];
+  const pct = Math.round(strength.filter(s => s[1]).length / strength.length * 100);
+  return `<button class="btn btn-g btn-sm" data-act="nav" data-v="${S.back}" style="margin-bottom:12px">${icon('back',16)}Back</button>
+  <div class="pf">
+   <div class="stack">
+    <section class="card">
+      <div class="cover"><span>Register · ${esc(d.name)} · admitted ${p.adm}</span></div>
+      <div class="pf-head">
+        ${av(p,'av-xl')}
+        <h1 class="pf-name">${esc(p.name)} ${verifiedAch(p).length ? `<span class="st st-ok">${icon('shield',14)}${verifiedAch(p).length} verified achievements</span>` : ''}</h1>
+        <p class="pf-line">${esc(p.headline)}</p>
+        <p class="pf-meta">${esc(meta(p))}${p.loc?' · '+esc(p.loc):''}${all?` · <span class="mono">${p.cid}</span>`:''}</p>
+        <div class="row" style="margin-top:12px">
+          ${p.role==='alumni'?`<span class="chip chip-a">${icon('case',13)}Now: ${esc(p.status)}</span>`:''}
+          ${p.mentor?'<span class="chip chip-a">Open to mentoring</span>':''}
+          ${(p.links||[]).map(l => `<span class="chip">${icon('link',13)}${esc(l)}</span>`).join('')}
+        </div>
+        <div class="row" style="margin-top:16px">
+          ${own ? `<button class="btn btn-p" data-act="add">${icon('plus',16)}Add to journey</button>` : chatBtn(p.id)}
+          <button class="btn" data-act="copy" data-t="${esc(link)}">${icon('copy',16)}Copy profile link</button>
+          ${!own ? `<button class="btn btn-g" data-act="report" data-id="${p.id}">Report incorrect info</button>` : ''}
+        </div>
+      </div>
+    </section>
+    ${p.about ? `<section class="card pad"><h2 class="h2">About</h2><p style="margin-top:8px;max-width:68ch">${esc(p.about)}</p></section>` : ''}
+    <section class="card pad">
+      <div class="between"><h2 class="h2">Journey</h2>
+        <div class="row">${counts.map(([l,n]) => `<span class="chip ${l==='National'||l==='International'?'chip-g':''}">${n} ${l}</span>`).join('')}</div></div>
+      <p class="muted small" style="margin-top:4px">${all ? 'You see every item and its status. Others see only verified milestones.' : 'Every milestone here was checked by a faculty verifier or IQAC.'}</p>
+      <div class="strip" role="group" aria-label="Filter by year">${phs.map(ph => { const its = items.filter(i => phase(p,i).k === ph.k);
+        return `<button class="seg-y" data-act="phase" data-k="${ph.k}" aria-pressed="${S.jph===ph.k}"><b>${ph.label}</b><small>${ph.yr}</small><span class="dots">${its.map(i => `<span class="dot ${i.status!=='verified'?'p':i.ach?'a':''}"></span>`).join('')}</span></button>`; }).join('')}</div>
+      <div class="legend"><span><span class="dot a"></span>Achievement</span><span><span class="dot"></span>Other milestone</span>${all?'<span><span class="dot p"></span>Waiting for verification</span>':''}</div>
+      <div class="row" style="margin-top:14px">${[['all','All'],['ach','Achievements'],['campus','Societies & roles'],['work','Projects & work'],['edu','Education']].map(([k,l]) => `<button class="chip fchip" data-act="jf" data-k="${k}" aria-pressed="${S.jf===k}">${l}</button>`).join('')}</div>
+      ${journeyList(p, shown, all)}
+    </section>
+   </div>
+   <aside class="stack">
+    ${own ? `<section class="card pad stack"><div><h2 class="h2">Profile strength</h2><p class="muted small">${pct}% complete</p></div><div class="meter"><span style="width:${pct}%"></span></div>
+      ${strength.map(([t,ok]) => `<div class="tick ${ok?'done':''}">${icon(ok?'check':'plus',16)}<span>${t}</span></div>`).join('')}</section>
+      <section class="card pad stack"><h2 class="h2">Documents</h2><p class="muted small">${icon('lock',14)} Only you and the college can see these.</p>
+      ${['Marksheets, semesters 1–4','College ID card'].map(x => `<div class="row">${icon('file',18)}<span class="small">${x}</span></div>`).join('')}</section>`
+    : `<section class="card pad stack"><h2 class="h2">Talk to ${esc(first(p.name))}</h2>
+      ${p.mentor ? `<p class="small">Open to mentoring on:</p><div class="row">${(p.topics||[]).map(t => `<span class="chip">${esc(t)}</span>`).join('')}</div>` : `<p class="small">${p.accepts ? 'Accepts chat requests.' : 'Not taking chat requests right now.'}</p>`}
+      ${chatBtn(p.id)}
+      <p class="muted small">${icon('lock',14)} Your request includes your profile and a short note. Phone numbers and emails stay hidden.</p></section>`}
+    ${(p.skills||[]).length ? `<section class="card pad stack"><h2 class="h2">Skills</h2><div class="row">${p.skills.map(s => `<span class="chip">${esc(s)}</span>`).join('')}</div></section>` : ''}
+    <section class="card pad stack"><h2 class="h2">Similar paths</h2>${PEOPLE.filter(x => x.id !== p.id && x.id !== S.me && (x.dept === p.dept || x.status === p.status)).slice(0,3).map(x => `<div class="row">${av(x,'av-sm')}<div style="min-width:0;flex:1"><button class="link" data-act="profile" data-id="${x.id}"><b class="small">${esc(x.name)}</b></button><p class="muted small">${esc(x.headline)}</p></div></div>`).join('') || '<p class="muted small">No similar profiles yet.</p>'}</section>
+   </aside>
+  </div>`;
+}
+function journeyList(p, shown, all){
+  if (!shown.length) return `<div class="empty">${icon('info',24)}<p>Nothing in this view. Pick another filter or year.</p></div>`;
+  const byPh = []; shown.forEach(i => { const ph = phase(p,i); let g = byPh.find(x => x.k === ph.k); if (!g) byPh.push(g = Object.assign({its:[]}, ph)); g.its.push(i); });
+  return byPh.map(g => `<div class="jgroup"><div class="jlab">${g.label}<em>${g.yr || ''}</em></div><ol class="jlist">${g.its.map(i => {
+    const open = S.open.has(i.id);
+    return `<li class="${i.ach?'is-ach':''}"><button class="jrow" data-act="item" data-id="${i.id}" aria-expanded="${open}">
+      <span class="jico">${icon(KIND_ICON[i.kind]||'award',18)}</span>
+      <span><span class="jt">${esc(i.title)}</span><span class="js">${esc(KIND_LABEL[i.kind])}${i.org?' · '+esc(i.org):''} · ${fmtMonth(i.date)}</span></span>
+      <span class="jtags">${lvl(i.level)}${all || i.status!=='verified' ? stPill(i.status) : `<span class="st st-ok">${icon('check',14)}Verified</span>`}</span></button>
+      ${open ? `<div class="jdet">${i.desc ? `<p class="small">${esc(i.desc)}</p>` : ''}
+        <div class="proof">${i.proof.type==='cert' ? `<div class="cert"><i></i><b>Certificate</b><span>${esc(i.title.slice(0,40))}</span></div>` : `<span class="chip">${icon('link',14)}Link</span>`}
+          <div class="stack" style="gap:6px"><span class="small"><b>Proof:</b> ${esc(i.proof.label)}</span>
+          ${i.status==='verified' ? `<span class="small" style="color:var(--ok)">${icon('shield',14)} Verified by ${esc(i.ver.name)}, ${esc(i.ver.role)} · ${fmtDay(i.verOn)}</span>`
+           : i.status==='rejected' ? `<span class="small" style="color:var(--bad)">Not verified: ${esc(i.reason||'')}</span>`
+           : `<span class="small" style="color:var(--warn)">Waiting for ${esc(i.route.name)}, ${esc(i.route.role)} · sent ${fmtDay(i.subOn)}</span>`}</div></div></div>` : ''}</li>`; }).join('')}</ol></div>`).join('');
+}
+
+/* messages */
+function viewMessages(){
+  const mine = CHATS.filter(c => c.a === S.me || c.b === S.me);
+  const recv = REQS.filter(r => r.to === S.me && r.status === 'pending'), sent = REQS.filter(r => r.from === S.me && r.status === 'pending');
+  const chat = CHATS.find(c => c.id === S.chat);
+  return `<div class="card msg" data-open="${chat?1:0}">
+    <div class="mlist">
+      <div class="tabs"><button data-act="mtab" data-k="chats" aria-pressed="${S.mtab==='chats'}">Chats</button><button data-act="mtab" data-k="requests" aria-pressed="${S.mtab==='requests'}">Requests${recv.length?` (${recv.length})`:''}</button></div>
+      ${S.mtab === 'chats' ? (mine.length ? mine.map(c => { const o = get(c.a===S.me?c.b:c.a), last = c.msgs[c.msgs.length-1];
+          return `<button class="conv" data-act="chat" data-id="${c.id}" aria-current="${c.id===S.chat}">${av(o)}<div><b>${esc(o.name)}<small>${esc(last.at.split(',')[0])}</small></b><p>${last.from===S.me?'You: ':''}${esc(last.text)}</p></div>${c.unread[S.me]?'<span class="unread" aria-label="Unread"></span>':''}</button>`; }).join('')
+        : `<div class="empty"><p>No chats yet. Find someone in People and send a request.</p></div>`)
+      : `<div class="req"><b class="small muted">RECEIVED</b></div>${recv.map(r => reqRow(r,'recv')).join('') || '<p class="req muted small">No requests waiting.</p>'}
+         <div class="req"><b class="small muted">SENT</b></div>${sent.map(r => reqRow(r,'sent')).join('') || '<p class="req muted small">No pending requests.</p>'}`}
+    </div>
+    <div class="pane">${chat ? chatPane(chat) : `<div class="empty">${icon('message',32)}<p>Chats start only after the other person accepts your request.</p></div>`}</div>
+  </div>`;
+}
+function reqRow(r, dir){
+  const o = get(dir === 'recv' ? r.from : r.to);
+  return `<div class="req"><div class="row">${av(o,'av-sm')}<div style="min-width:0;flex:1"><button class="link" data-act="profile" data-id="${o.id}"><b class="small">${esc(o.name)}</b></button><p class="muted small">${esc(o.headline)}</p></div></div>
+    <div class="row"><span class="chip chip-a">${esc(r.purpose)}</span><span class="muted small">${fmtDay(r.on)}</span></div><q>${esc(r.note)}</q>
+    <div class="row">${dir === 'recv' ? `<button class="btn btn-p btn-sm" data-act="accept" data-id="${r.id}">Accept</button><button class="btn btn-sm" data-act="decline" data-id="${r.id}">Decline</button>`
+      : `<span class="st st-warn">${icon('clock',14)}Waiting for ${esc(first(o.name))}</span><button class="btn btn-g btn-sm" data-act="accept" data-id="${r.id}">Demo: accept as ${esc(first(o.name))}</button>`}</div></div>`;
+}
+function chatPane(c){
+  const o = get(c.a === S.me ? c.b : c.a);
+  return `<div class="pane-h"><button class="btn btn-g btn-sm" data-act="unchat" aria-label="Back to chats">${icon('back',16)}</button>${av(o)}<div><button class="link" data-act="profile" data-id="${o.id}"><b>${esc(o.name)}</b></button><p class="muted small" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(o.headline)}</p></div></div>
+    <div class="thread" id="thread"><p class="note">Started from a ${esc(c.purpose.toLowerCase())} request · ${fmtDay(c.started)}. Contact details stay hidden unless you share them.</p>
+      ${c.msgs.map(m => `<div class="bub ${m.from===S.me?'me':'them'}">${esc(m.text)}<small>${esc(m.at)}</small></div>`).join('')}</div>
+    <form class="compose" data-form="send"><label for="msg-in" hidden>Message</label><textarea id="msg-in" placeholder="Write a message" required></textarea><button class="btn btn-p" type="submit">${icon('send',16)}Send</button></form>
+    <p class="muted small" style="padding:0 16px 10px">Prototype: replies are simulated.</p>`;
+}
+
+/* verification */
+function viewVerify(){
+  const list = myQueue(), sel = list.find(q => q.id === S.vsel) || null;
+  const me = get(S.me);
+  return `<div class="between" style="margin-bottom:16px"><div><h1 class="h2" style="font-size:26px">Verification inbox</h1>
+    <p class="muted small">${S.role==='admin' ? 'Everything waiting across the college.' : 'Routed to you as '+esc(me.headline)+'.'}</p></div><span class="chip">${list.length} waiting</span></div>
+  <div class="card vq" data-open="${sel?1:0}">
+    <div class="vlist mlist">${list.length ? list.map(q => { const t = qText(q); return `<button class="vitem" data-act="vsel" data-id="${q.id}" aria-current="${q.id===S.vsel}">${av({id:t.id,name:t.name},'av-sm')}<div><b>${esc(t.name)}</b><p>${esc(t.title)}</p><span class="muted small">${esc(t.type)} · ${fmtDay(q.on)}</span></div>${stPill(q.status)}</button>`; }).join('')
+      : `<div class="empty">${icon('check',28)}<p>All caught up.</p></div>`}</div>
+    <div class="vdet pane">${sel ? vDetail(sel) : `<div class="empty">${icon('shield',32)}<p>Pick an item to see the proof and approve it.</p></div>`}</div>
+  </div>`;
+}
+function qText(q){
+  if (q.kind === 'registration') return {id:q.data.name, name:q.data.name, title:'New '+q.data.role.toLowerCase()+' registration, '+q.data.course+' '+q.data.batch, type:'Registration'};
+  if (q.kind === 'report') return {id:q.personId, name:get(q.personId).name, title:'Profile reported: '+q.reason, type:'Report'};
+  return {id:q.personId, name:get(q.personId).name, title:q.item.title, type:KIND_LABEL[q.item.kind]};
+}
+function vDetail(q){
+  const t = qText(q); let body = '';
+  if (q.kind === 'achievement') { const p = get(q.personId), i = q.item;
+    body = `<div class="row">${av(p)}<div><button class="link" data-act="profile" data-id="${p.id}"><b>${esc(p.name)}</b></button><p class="muted small">${esc(meta(p))} · <span class="mono">${p.cid}</span></p></div></div>
+      <div><h2 class="h2">${esc(i.title)}</h2><div class="row" style="margin-top:8px">${lvl(i.level)}<span class="chip">${esc(KIND_LABEL[i.kind])}</span><span class="muted small">${esc(i.org)} · ${fmtMonth(i.date)}</span></div></div>
+      ${i.desc?`<p class="small">${esc(i.desc)}</p>`:''}
+      <div class="proof"><div class="cert" style="width:200px"><i></i><b>Certificate</b><span>${esc(i.title)}</span><span>${esc(p.name)}</span></div><span class="small">${esc(i.proof.label)}<br><span class="muted">Routed to ${esc(q.route.name)}: ${i.level==='College'?'on-campus activity':'off-campus achievement'}.</span></span></div>`;
+  } else if (q.kind === 'registration') {
+    body = `<h2 class="h2">${esc(q.data.name)}</h2><div class="tw"><table><tbody>${Object.entries(q.data).map(([k,v]) => `<tr><th>${esc(k[0].toUpperCase()+k.slice(1))}</th><td>${esc(v)}</td></tr>`).join('')}</tbody></table></div>
+      <p class="small" style="color:var(--ok)">${icon('check',14)} ${esc(q.match)}</p>`;
+  } else {
+    body = `<h2 class="h2">${esc(t.name)}</h2><p class="small">${esc(q.reason)}: ${esc(q.text)}</p>`;
+  }
+  return `<div class="pane-h"><button class="btn btn-g btn-sm" data-act="vback" aria-label="Back to list">${icon('back',16)}</button><div><b>${esc(t.type)}</b><p class="muted small">Submitted ${fmtDay(q.on)}</p></div>${stPill(q.status)}</div>
+    <div class="thread" style="gap:16px">${body}
+      ${S.vmode ? `<div class="fld"><label for="vnote">${S.vmode==='reject'?'Reason (the student sees this)':'What do you need?'}</label><textarea id="vnote" placeholder="${S.vmode==='reject'?'For example: certificate name does not match':'For example: please upload the full certificate'}"></textarea></div>
+        <div class="row"><button class="btn ${S.vmode==='reject'?'btn-d':'btn-p'}" data-act="vdo" data-k="${S.vmode}">${S.vmode==='reject'?'Reject':'Send request'}</button><button class="btn btn-g" data-act="vmode" data-k="">Cancel</button></div>`
+      : `<div class="row"><button class="btn btn-p" data-act="vdo" data-k="approve">${icon('check',16)}Approve</button><button class="btn" data-act="vmode" data-k="info">Ask for more info</button><button class="btn btn-d" data-act="vmode" data-k="reject">Reject</button></div>`}
+    </div>`;
+}
+
+/* admin */
+function viewAdmin(){
+  const tabs = [['overview','Overview'],['reports','NAAC / NIRF reports'],['records','Records'],['audit','Audit log']];
+  return `<div class="between" style="margin-bottom:12px"><div><h1 class="h2" style="font-size:26px">IQAC dashboard</h1><p class="muted small">Every number below comes from verified records in the database.</p></div>
+    <select id="adept" data-m="adept" style="width:auto">${['',...Object.keys(DEPTS)].map(k => `<option value="${k}" ${S.adept===k?'selected':''}>${k?DEPTS[k].name:'All departments'}</option>`).join('')}</select></div>
+  <div class="atabs">${tabs.map(([k,l]) => `<button data-act="atab" data-k="${k}" aria-pressed="${S.atab===k}">${l}</button>`).join('')}</div>
+  <div id="aregion">${adminRegion()}</div>`;
+}
+function adminRegion(){ return {overview:aOverview, reports:aReports, records:aRecords, audit:aAudit}[S.atab](); }
+function regs(){ return REG.filter(r => !S.adept || r.dept === S.adept); }
+function allAch(){
+  const a = SACH.map(x => ({level:x.level, status:x.status, dept:x.dept, date:x.date, name:x.name, cid:x.cid, title:x.title, ver:x.ver}));
+  PEOPLE.forEach(p => p.items.filter(i => i.ach).forEach(i => a.push({level:i.level, status:i.status, dept:p.dept, date:i.date, name:p.name, cid:p.cid, title:i.title, ver:i.ver?i.ver.name:''})));
+  return a.filter(x => !S.adept || x.dept === S.adept);
+}
+function aOverview(){
+  const rs = regs(), al = rs.filter(r => r.role==='alumni'), achs = allAch(), ver = achs.filter(a => a.status==='verified');
+  const pending = QUEUE.filter(q => q.status==='pending' || q.status==='info').length;
+  const k = [['Total alumni',al.length],['Current students',rs.filter(r => r.role==='student').length],['Verified achievements',ver.length],['Pending verification',pending,'verify'],['Active mentors',al.filter(r => r.mentor).length],['Departments',S.adept?1:Object.keys(DEPTS).length]];
+  const byLevel = LEVELS.map(l => ({l, v:ver.filter(a => a.level===l).length}));
+  const out = OUTCOMES.map(o => ({l:o, v:al.filter(r => r.outcome===o).length}));
+  const years = []; for (let y = 2015; y <= 2026; y++) years.push({l:String(y).slice(2), full:y, v:al.filter(r => r.grad===y).length});
+  const needs = al.filter(r => r.record==='Needs update').length;
+  return `<div class="stack" style="gap:20px">
+    <div class="kpis">${k.map(([l,v,go]) => go ? `<button class="card kpi" data-act="nav" data-v="${go}"><span>${l}</span><b>${fmtN(v)}</b></button>` : `<div class="card kpi"><span>${l}</span><b>${fmtN(v)}</b></div>`).join('')}</div>
+    <div class="grid2">
+      <section class="card pad"><h2 class="h2">Verified achievements by level</h2><p class="muted small">All years</p>${cols(byLevel.map(x => ({l:x.l, v:x.v, tip:`${x.l}: ${fmtN(x.v)} achievements`})), true)}</section>
+      <section class="card pad"><h2 class="h2">Where alumni are now</h2><p class="muted small">Latest status on record</p><div class="stack" style="gap:4px;margin-top:12px">${hbars(out, al.length)}</div></section>
+    </div>
+    <section class="card pad"><h2 class="h2">Alumni on record by graduation year</h2><p class="muted small">Class of 2015 to 2026</p>${cols(years.map(x => ({l:"'"+x.l, v:x.v, tip:`Class of ${x.full}: ${x.v} alumni`})), false)}</section>
+    <section class="card pad stack"><h2 class="h2">Needs attention</h2>
+      <div class="between"><span class="small">${fmtN(needs)} alumni haven’t confirmed their status in 2+ years</span><button class="btn btn-sm" data-act="remind" data-n="${needs}">Send update reminder</button></div>
+      <div class="between"><span class="small">${pending} items waiting for verification</span><button class="btn btn-sm" data-act="nav" data-v="verify">Open queue</button></div></section>
+  </div>`;
+}
+function cols(data, labelAll){
+  const max = Math.max(1, ...data.map(d => d.v)); const mi = data.findIndex(d => d.v === max);
+  return `<div class="cols">${data.map((d,i) => `<div class="col" data-tip="${esc(d.tip)}">${labelAll || i===mi || i===data.length-1 ? `<span>${fmtN(d.v)}</span>` : ''}<i style="height:calc((100% - 22px) * ${(d.v/max).toFixed(3)})"></i></div>`).join('')}</div>
+    <div class="col-l">${data.map(d => `<span>${esc(d.l)}</span>`).join('')}</div>`;
+}
+function hbars(data, total){
+  const max = Math.max(1, ...data.map(d => d.v));
+  return data.map(d => `<div class="hb" data-tip="${esc(d.l)}: ${fmtN(d.v)} of ${fmtN(total)}"><span>${esc(d.l)}</span><div class="hb-t"><i style="width:calc((100% - 96px) * ${(d.v/max).toFixed(3)})"></i><span>${fmtN(d.v)} · ${total?Math.round(d.v/total*100):0}%</span></div></div>`).join('');
+}
+const REPORTS = {
+  progression:{label:'NAAC · Student progression', year:'Graduating batch', desc:'Outgoing students who were placed, went for higher studies or research, or cleared a competitive exam.'},
+  awards:{label:'NAAC · Awards and medals', year:'Academic year', desc:'Awards at university, state, national and international level, with the verifier for each.'},
+  nirf:{label:'NIRF · Graduation outcomes', year:'Graduating batch', desc:'Graduates, placements and higher studies by department.'}
+};
+function reportData(){
+  const y = Number(S.ryear), rs = regs();
+  if (S.rtype === 'progression') {
+    const rows = rs.filter(r => r.role==='alumni' && r.grad===y);
+    return {head:['Name','College ID','Department','Outcome'], rows:rows.map(r => [r.name, r.cid, DEPTS[r.dept].name, r.outcome]),
+      sum:OUTCOMES.map(o => [o, rows.filter(r => r.outcome===o).length])};
+  }
+  if (S.rtype === 'awards') {
+    const rows = allAch().filter(a => a.status==='verified' && a.level!=='College' && ayStart(a.date)===y);
+    return {head:['Name','College ID','Department','Award','Level','Month','Verified by'], rows:rows.map(a => [a.name, a.cid, DEPTS[a.dept].name, a.title, a.level, fmtMonth(a.date), a.ver]),
+      sum:LEVELS.slice(1).map(l => [l, rows.filter(a => a.level===l).length])};
+  }
+  const rows = Object.keys(DEPTS).filter(k => !S.adept || k===S.adept).map(k => { const g = REG.filter(r => r.dept===k && r.role==='alumni' && r.grad===y);
+    const pl = g.filter(r => r.outcome==='Job').length, hs = g.filter(r => r.outcome==='Higher studies' || r.outcome==='Research').length;
+    return [DEPTS[k].name, g.length, pl, hs, g.length?Math.round(pl/g.length*100)+'%':'—', g.length?Math.round(hs/g.length*100)+'%':'—']; });
+  return {head:['Department','Graduates','Placed','Higher studies','% placed','% higher studies'], rows, sum:[['Graduates',rows.reduce((n,r) => n+r[1],0)],['Placed',rows.reduce((n,r) => n+r[2],0)],['Higher studies',rows.reduce((n,r) => n+r[3],0)]]};
+}
+function aReports(){
+  const rep = REPORTS[S.rtype], d = reportData();
+  const yrs = S.rtype === 'awards' ? [2025,2024,2023] : [2026,2025,2024,2023,2022];
+  if (!yrs.includes(Number(S.ryear))) S.ryear = String(yrs[0]);
+  return `<div class="stack" style="gap:16px">
+    <section class="card pad stack"><div class="row" style="align-items:flex-end">
+      <div class="fld" style="flex:2;min-width:220px"><label for="rtype">Report</label><select id="rtype" data-m="rtype">${Object.entries(REPORTS).map(([k,r]) => `<option value="${k}" ${S.rtype===k?'selected':''}>${r.label}</option>`).join('')}</select></div>
+      <div class="fld" style="flex:1;min-width:150px"><label for="ryear">${rep.year}</label><select id="ryear" data-m="ryear">${yrs.map(y => `<option value="${y}" ${S.ryear===String(y)?'selected':''}>${S.rtype==='awards'?ayLabel(y):y}</option>`).join('')}</select></div>
+      <button class="btn btn-p" data-act="csv">${icon('copy',16)}Copy as CSV</button></div>
+      <p class="muted small">${rep.desc} Only verified records are counted. The full build also exports PDF and Excel.</p></section>
+    <div class="kpis">${d.sum.map(([l,v]) => `<div class="card kpi"><span>${l}</span><b>${fmtN(v)}</b></div>`).join('')}</div>
+    <div class="tw"><table><thead><tr>${d.head.map((h,i) => `<th class="${typeof d.rows[0]?.[i]==='number'?'n':''}">${h}</th>`).join('')}</tr></thead>
+      <tbody>${d.rows.slice(0,40).map(r => `<tr>${r.map(c => `<td class="${typeof c==='number'?'n':''}">${esc(c)}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${d.head.length}" class="muted">No verified records for this selection.</td></tr>`}</tbody></table></div>
+    ${d.rows.length > 40 ? `<p class="muted small">Showing 40 of ${fmtN(d.rows.length)} rows. Copy as CSV to get all of them.</p>` : ''}
+  </div>`;
+}
+function aRecords(){
+  const rs = regs().slice().reverse().slice(0,60);
+  return `<div class="stack" style="gap:12px"><div class="between"><p class="muted small">Showing 60 of ${fmtN(regs().length)} records. Replaces the physical register.</p>
+    <div class="row"><button class="btn btn-sm" data-act="toast" data-t="In the full build this opens a CSV or Excel import with duplicate checks.">Import register (CSV)</button></div></div>
+    <div class="tw"><table><thead><tr><th>College ID</th><th>Name</th><th>Role</th><th>Department</th><th>Batch</th><th>Status now</th><th>Record</th></tr></thead><tbody>
+    ${rs.map(r => `<tr><td class="mono">${r.cid}</td><td>${r.featured?`<button class="link" data-act="profile" data-id="${r.featured}">${esc(r.name)}</button>`:esc(r.name)}</td><td>${r.role==='alumni'?'Alumni':'Student'}</td><td>${DEPTS[r.dept].name}</td><td>${r.adm}–${String(r.grad||r.adm+3).slice(2)}</td><td>${esc(r.outcome||'Studying')}</td><td>${r.record==='Verified'?stPill('verified'):'<span class="st st-warn">'+icon('info',14)+'Needs update</span>'}</td></tr>`).join('')}
+    </tbody></table></div></div>`;
+}
+function aAudit(){
+  return `<div class="tw"><table><thead><tr><th>When</th><th>Who</th><th>What</th></tr></thead><tbody>${AUDIT.map(a => `<tr><td style="white-space:nowrap">${esc(a.at)}</td><td>${esc(a.who)}</td><td>${esc(a.what)}</td></tr>`).join('')}</tbody></table></div>`;
+}
+
+/* modals */
+function renderModal(){
+  const root = document.getElementById('modal');
+  if (!S.modal) { root.innerHTML = ''; return; }
+  const m = S.modal; let h = '';
+  if (m.type === 'ask') { const p = get(m.id);
+    h = `<form data-form="ask"><div class="mh"><h2 class="h2" id="mt">Request to chat with ${esc(first(p.name))}</h2><button type="button" class="btn btn-g btn-sm" data-act="close" aria-label="Close">${icon('x',16)}</button></div>
+      <div class="mb"><div class="fld"><label for="ask-p">What is it about?</label><select id="ask-p">${['Mentorship','Career advice','Resume review','Internship / referral','Higher studies advice','Project collaboration'].map(x => `<option>${x}</option>`).join('')}</select></div>
+      <div class="fld"><label for="ask-n">Short note</label><textarea id="ask-n" maxlength="300" required placeholder="Say who you are and what you’d like to ask."></textarea></div>
+      <p class="muted small">${icon('lock',14)} ${esc(first(p.name))} sees your profile and this note. The chat opens only if they accept.</p></div>
+      <div class="mf"><button type="button" class="btn" data-act="close">Cancel</button><button class="btn btn-p" type="submit">Send request</button></div></form>`;
+  } else if (m.type === 'add') {
+    h = `<form data-form="add"><div class="mh"><h2 class="h2" id="mt">Add to your journey</h2><button type="button" class="btn btn-g btn-sm" data-act="close" aria-label="Close">${icon('x',16)}</button></div>
+      <div class="mb">
+        <div class="fld"><label for="f-kind">Type</label><select id="f-kind">${['achievement','exam','research','society','position','event','project','internship'].map(k => `<option value="${k}">${KIND_LABEL[k]}</option>`).join('')}</select></div>
+        <div class="fld"><label for="f-title">Title</label><input id="f-title" type="text" required placeholder="For example: 2nd prize, inter-college debate"></div>
+        <div class="row" style="align-items:flex-start"><div class="fld" style="flex:1;min-width:150px"><label for="f-date">Month</label><input id="f-date" type="month" required max="${today().slice(0,7)}"></div>
+        <div class="fld" style="flex:1;min-width:150px"><label for="f-level">Level</label><select id="f-level">${LEVELS.map(l => `<option>${l}</option>`).join('')}</select></div></div>
+        <div class="fld"><label for="f-org">Organised by</label><input id="f-org" type="text" placeholder="Event, society or organisation"></div>
+        <div class="fld"><label for="f-file">Proof: certificate</label><input id="f-file" type="file" accept=".pdf,image/*"></div>
+        <div class="fld"><label for="f-link">Or a link</label><input id="f-link" type="url" placeholder="https://"></div>
+        <p class="muted small">College-level items go to your society’s faculty coordinator. Everything else goes to your department moderator.</p></div>
+      <div class="mf"><button type="button" class="btn" data-act="close">Cancel</button><button class="btn btn-p" type="submit">Send for verification</button></div></form>`;
+  } else if (m.type === 'report') {
+    h = `<form data-form="report"><div class="mh"><h2 class="h2" id="mt">Report incorrect information</h2><button type="button" class="btn btn-g btn-sm" data-act="close" aria-label="Close">${icon('x',16)}</button></div>
+      <div class="mb"><div class="fld"><label for="r-why">Reason</label><select id="r-why"><option>Achievement looks wrong</option><option>Wrong batch or department</option><option>Fake profile</option><option>Something else</option></select></div>
+      <div class="fld"><label for="r-txt">Details</label><textarea id="r-txt" required></textarea></div><p class="muted small">IQAC reviews every report. The person isn’t told who reported it.</p></div>
+      <div class="mf"><button type="button" class="btn" data-act="close">Cancel</button><button class="btn btn-p" type="submit">Send to IQAC</button></div></form>`;
+  } else if (m.type === 'csv') {
+    h = `<div class="mh"><h2 class="h2" id="mt">Report as CSV</h2><button class="btn btn-g btn-sm" data-act="close" aria-label="Close">${icon('x',16)}</button></div>
+      <div class="mb"><p class="small">Copying was blocked, so select all of this and copy it.</p><textarea id="csv-out" readonly style="min-height:240px;font:12px var(--mono)">${esc(m.text)}</textarea></div>`;
+  }
+  root.innerHTML = `<div class="ovl" data-act="close-bg"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="mt">${h}</div></div>`;
+  const f = root.querySelector('textarea, input, select'); if (f) f.focus();
+}
+
+/* ---------------- actions ---------------- */
+function go(v){ if (v === 'me') { S.back = S.view === 'profile' ? S.back : S.view; openProfile(S.me); return; } S.view = v; S.vmode = null; render(); window.scrollTo(0,0); }
+function openProfile(id){
+  if (S.view !== 'profile') S.back = S.view;
+  S.prof = id; S.view = 'profile'; S.jf = 'all'; S.jph = '';
+  const p = get(id); const last = p.items.filter(i => i.ach && (i.status==='verified' || id===S.me)).pop();
+  S.open = new Set(last ? [last.id] : []); render(); window.scrollTo(0,0);
+}
+function startChat(r){
+  r.status = 'accepted';
+  const c = {id:'c'+(CHATS.length+1), a:r.from, b:r.to, purpose:r.purpose, started:today(), unread:{}, msgs:[{from:r.from, text:r.note, at:'Today, '+clock()}]};
+  if (r.from === S.me) { c.msgs.push({from:r.to, text:'Hi! Happy to help. What would you like to start with?', at:'Today, '+clock()}); c.unread[S.me] = true; }
+  CHATS.unshift(c); return c;
+}
+const ACT = {
+  noop(){},
+  login(el){ const role = el.dataset.role; S.role = role; S.me = DEMO[role]; S.chat = null; S.vsel = null; S.mtab = 'chats';
+    S.view = role==='admin' ? 'admin' : role==='faculty' ? 'verify' : 'people';
+    if (role === 'student' || role === 'alumni') { S.back = 'people'; openProfile(S.me); } else { render(); window.scrollTo(0,0); } },
+  logout(){ S.me = null; S.role = null; render(); },
+  home(){ go(S.role==='admin'?'admin':S.role==='faculty'?'verify':'me'); },
+  nav(el){ go(el.dataset.v); },
+  profile(el){ openProfile(el.dataset.id); },
+  path(el){ S.path = S.path === el.dataset.k ? '' : el.dataset.k; refresh('presults'); },
+  phase(el){ S.jph = S.jph === el.dataset.k ? '' : el.dataset.k; render(); },
+  jf(el){ S.jf = el.dataset.k; render(); },
+  item(el){ const id = el.dataset.id; S.open.has(id) ? S.open.delete(id) : S.open.add(id); render(); },
+  ask(el){ S.modal = {type:'ask', id:el.dataset.id}; renderModal(); },
+  add(){ S.modal = {type:'add'}; renderModal(); },
+  report(el){ S.modal = {type:'report', id:el.dataset.id}; renderModal(); },
+  close(){ S.modal = null; renderModal(); },
+  'close-bg'(el, e){ if (e.target === el) ACT.close(); },
+  copy(el){ const t = 'https://'+el.dataset.t; navigator.clipboard?.writeText(t).then(() => toast('Profile link copied'), () => toast(t)) ?? toast(t); },
+  requests(){ S.view = 'messages'; S.mtab = 'requests'; S.chat = null; render(); },
+  chat(el){ S.view = 'messages'; S.chat = el.dataset.id; S.mtab = 'chats'; const c = CHATS.find(x => x.id === S.chat); if (c) c.unread[S.me] = false; render(); scrollThread(); },
+  unchat(){ S.chat = null; render(); },
+  mtab(el){ S.mtab = el.dataset.k; render(); },
+  accept(el){ const r = REQS.find(x => x.id === el.dataset.id); const c = startChat(r); const o = get(r.from===S.me?r.to:r.from);
+    S.chat = c.id; S.mtab = 'chats'; c.unread[S.me] = false; render(); scrollThread(); toast(r.from===S.me ? `${first(o.name)} accepted your request` : `Chat started with ${first(o.name)}`); },
+  decline(el){ const r = REQS.find(x => x.id === el.dataset.id); r.status = 'declined'; render(); toast('Request declined. They won’t see a reason.'); },
+  vsel(el){ S.vsel = el.dataset.id; S.vmode = null; render(); },
+  vback(){ S.vsel = null; render(); },
+  vmode(el){ S.vmode = el.dataset.k || null; render(); const t = document.getElementById('vnote'); if (t) t.focus(); },
+  vdo(el){
+    const q = QUEUE.find(x => x.id === S.vsel), k = el.dataset.k, note = (document.getElementById('vnote')||{}).value || '';
+    if (k !== 'approve' && !note.trim()) { toast(k==='reject' ? 'Add a reason so the student knows what to fix.' : 'Say what extra information you need.'); return; }
+    const t = qText(q), ver = S.role==='admin' ? IQ : q.route;
+    if (k === 'approve') { q.status = 'done';
+      if (q.item) { q.item.status = 'verified'; q.item.ver = ver; q.item.verOn = today(); }
+      if (q.kind === 'registration') REG.push({name:q.data.name, role:'alumni', dept:'CH', adm:2016, grad:2019, cid:'16CH'+(++seq), outcome:'Not reported', record:'Verified', active:true});
+      audit(`Approved “${t.title}” for ${t.name}`); toast(`Approved. ${first(t.name)} has been notified.`);
+    } else if (k === 'reject') { q.status = 'done'; if (q.item) { q.item.status = 'rejected'; q.item.reason = note; } audit(`Rejected “${t.title}”: ${note}`); toast('Rejected. The reason was sent.'); }
+    else { q.status = 'info'; audit(`Asked ${t.name} for more information`); toast('Request sent. The item stays in your inbox.'); }
+    S.vmode = null; const next = myQueue().find(x => x.status === 'pending'); S.vsel = next ? next.id : null; render();
+  },
+  atab(el){ S.atab = el.dataset.k; render(); },
+  remind(el){ audit(`Sent status reminders to ${el.dataset.n} alumni`); toast(`Reminder sent to ${el.dataset.n} alumni`); },
+  toast(el){ toast(el.dataset.t); },
+  csv(){
+    const d = reportData(), cell = v => /[",\n]/.test(String(v)) ? '"'+String(v).replace(/"/g,'""')+'"' : String(v);
+    const text = [d.head, ...d.rows].map(r => r.map(cell).join(',')).join('\n');
+    audit(`Exported ${REPORTS[S.rtype].label}, ${S.ryear} (CSV)`);
+    const fail = () => { S.modal = {type:'csv', text}; renderModal(); };
+    try { navigator.clipboard.writeText(text).then(() => toast(`Copied ${d.rows.length} rows as CSV`), fail); } catch (e) { fail(); }
+  }
+};
+function scrollThread(){ const t = document.getElementById('thread'); if (t) t.scrollTop = t.scrollHeight; }
+function refresh(id){ const el = document.getElementById(id); if (!el) return render(); el.innerHTML = id === 'presults' ? peopleResults() : adminRegion(); }
+
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]'); if (!el) return;
+  const f = ACT[el.dataset.act]; if (f) f(el, e);
+});
+document.addEventListener('input', e => {
+  const el = e.target; if (!el.dataset || !el.dataset.m || el.type === 'checkbox' || el.tagName === 'SELECT') return;
+  S[el.dataset.m] = el.value; refresh('presults');
+});
+document.addEventListener('change', e => {
+  const el = e.target; if (!el.dataset || !el.dataset.m) return;
+  if (el.type === 'checkbox') { S[el.dataset.m] = el.checked; refresh('presults'); }
+  else if (el.tagName === 'SELECT') { S[el.dataset.m] = el.value; refresh(el.dataset.m.startsWith('p') ? 'presults' : 'aregion'); }
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && S.modal) ACT.close();
+  if (e.key === 'Enter' && !e.shiftKey && e.target.id === 'msg-in') { e.preventDefault(); e.target.form.requestSubmit(); }
+});
+document.addEventListener('submit', e => {
+  e.preventDefault(); const f = e.target.dataset.form; const v = id => document.getElementById(id).value.trim();
+  if (f === 'send') {
+    const text = v('msg-in'); if (!text) return; const c = CHATS.find(x => x.id === S.chat);
+    c.msgs.push({from:S.me, text, at:'Today, '+clock()}); render(); scrollThread(); document.getElementById('msg-in').focus();
+    const other = c.a === S.me ? c.b : c.a; const replies = get(other).role === 'alumni'
+      ? ['Thanks for the message! Give me a day and I’ll reply properly.','Good question. Start early and keep proof of everything you do.','Happy to help. Can we do a 15-minute call on Saturday?']
+      : ['Thank you so much, that really helps!','Sure, I’ll share it by tonight.','Got it. I’ll update you after I try this.'];
+    setTimeout(() => { c.msgs.push({from:other, text:replies[c.msgs.length % 3], at:'Today, '+clock()}); if (S.view==='messages' && S.chat===c.id) { render(); scrollThread(); } }, 1400);
+  } else if (f === 'ask') {
+    REQS.push({id:'q'+(REQS.length+1), from:S.me, to:S.modal.id, purpose:v('ask-p'), note:v('ask-n'), on:today(), status:'pending'});
+    const n = first(get(S.modal.id).name); S.modal = null; render(); toast(`Request sent to ${n}`);
+  } else if (f === 'add') {
+    if (!document.getElementById('f-file').files.length && !v('f-link')) { toast('Add a certificate or a link as proof.'); return; }
+    const p = get(S.me), level = v('f-level'), kind = v('f-kind');
+    const route = p.role === 'alumni' ? IQ : level === 'College' ? coord(p.dept) : mod(p.dept);
+    const it = I('u'+Date.now(), v('f-date'), kind, v('f-title'), v('f-org'), ['achievement','exam','research','event'].includes(kind) ? level : null, null,
+      {status:'pending', subOn:today(), route, personId:p.id, proof:{type:v('f-link')?'link':'cert', label:v('f-link')||document.getElementById('f-file').files[0].name}});
+    p.items.push(it); QUEUE.push({id:'v'+QUEUE.length, kind:'achievement', personId:p.id, item:it, route, on:today(), status:'pending'});
+    S.modal = null; S.open.add(it.id); render(); toast(`Sent to ${route.name} for verification`);
+  } else if (f === 'report') {
+    QUEUE.push({id:'v'+QUEUE.length, kind:'report', personId:S.modal.id, reason:v('r-why'), text:v('r-txt'), route:IQ, on:today(), status:'pending'});
+    S.modal = null; renderModal(); toast('Sent to IQAC for review');
+  }
+});
+const tip = document.getElementById('tip');
+document.addEventListener('mouseover', e => { const el = e.target.closest('[data-tip]'); if (!el) { tip.hidden = true; return; } tip.textContent = el.dataset.tip; tip.hidden = false; });
+document.addEventListener('mousemove', e => { if (tip.hidden) return; tip.style.left = Math.min(e.clientX + 14, innerWidth - tip.offsetWidth - 8)+'px'; tip.style.top = (e.clientY + 14)+'px'; });
+
+render();
+})();
+</script>
