@@ -387,3 +387,49 @@ iframe.scanview { height: 780px; border: 0; }
   .auth-l { padding: 28px 20px; } .auth-l h1 { font-size: 24px; }
   .toast { bottom: calc(80px + env(safe-area-inset-bottom, 0px)); }
 }
+
+/* ---------- motion ---------- */
+:root { --ease: cubic-bezier(.2, .7, .2, 1); }
+#view { transition: opacity .16s ease; }
+#view.leaving { opacity: .5; pointer-events: none; }
+.enter > *, #view.enter > * { animation: rise .32s var(--ease) both; }
+#view.enter > *:nth-child(2) { animation-delay: .04s; }
+#view.enter > *:nth-child(3) { animation-delay: .08s; }
+#view.enter > *:nth-child(n+4) { animation-delay: .12s; }
+.soft { animation: fadein .22s ease both; }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes fadein { from { opacity: .3; } to { opacity: 1; } }
+@keyframes pop { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
+@keyframes toastin { from { opacity: 0; transform: translate(-50%, 10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes grow-x { from { transform: scaleX(0); } }
+@keyframes grow-y { from { transform: scaleY(0); } }
+@keyframes ring { from { stroke-dasharray: 0 999; } }
+
+/* interactive elements ease between states */
+.btn, .chip, .fchip, .round, .iconbtn, .nav button, .side-foot button, .li, .aitem, .yseg, .demo-acc button, .tabs button, .atabs button, .see, .link,
+input, select, textarea, .switch i, .kpi, .pcard, .card, .jico, .prow {
+  transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .2s ease, transform .2s var(--ease), opacity .16s ease;
+}
+.btn:active, .round:active, .iconbtn:active, .fchip:active { transform: translateY(1px); }
+.pcard:hover, .aitem:hover, button.kpi:hover { box-shadow: 0 6px 18px rgba(28, 36, 48, .08); transform: translateY(-2px); }
+.nav button:hover { transform: translateX(2px); }
+.nav button[aria-current="page"]:hover { transform: none; }
+.jrow:hover .jico { transform: scale(1.06); }
+
+/* overlays */
+.ovl { animation: fadein .18s ease both; }
+.modal { animation: pop .24s var(--ease) both; }
+.toast:not([hidden]) { animation: toastin .22s var(--ease) both; }
+.jdet { animation: rise .22s var(--ease) both; }
+.bub { animation: rise .2s var(--ease) both; }
+
+/* data comes in */
+.meter span { transform-origin: left; animation: grow-x .7s var(--ease) both; }
+.hb-t i { transform-origin: left; animation: grow-x .6s var(--ease) both; }
+.col i { transform-origin: bottom; animation: grow-y .6s var(--ease) both; }
+.ring-fill { animation: ring .8s var(--ease) both; }
+.osec { transition: opacity .2s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

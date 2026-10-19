@@ -114,7 +114,7 @@ function meta(u) {
 function ring(pct) {
   const r = 22, c = 2 * Math.PI * r;
   return `<svg width="56" height="56" viewBox="0 0 56 56" role="img" aria-label="${pct}%" style="flex:none"><circle cx="28" cy="28" r="${r}" fill="none" stroke="#e6e9ee" stroke-width="5"/>
-    <circle cx="28" cy="28" r="${r}" fill="none" stroke="#23569b" stroke-width="5" stroke-dasharray="${(c * pct / 100).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 28 28)"/>
+    <circle cx="28" cy="28" r="${r}" fill="none" class="ring-fill" style="--len:${(c * pct / 100).toFixed(1)}" stroke="#23569b" stroke-width="5" stroke-dasharray="${(c * pct / 100).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 28 28)"/>
     <text x="28" y="32" text-anchor="middle" style="font:600 12px var(--font);fill:#1c2430">${pct}%</text></svg>`;
 }
 function why(key) {
@@ -150,13 +150,43 @@ async function render() {
   const r = route();
   if (!S.me && !['login', 'register'].includes(r.name)) { location.hash = '#/login'; return; }
   if (S.me && ['login', 'register', ''].includes(r.name)) { location.hash = home(); return; }
-  if (!S.me) { $('app').innerHTML = r.name === 'register' ? viewRegister() : await viewLogin(); return; }
+  if (!S.me) { delete $('app').dataset.user; lastKey = null; $('app').innerHTML = r.name === 'register' ? viewRegister() : await viewLogin(); enter($('app').firstElementChild); return; }
   const views = { placements: viewPlacements, digitize: viewDigitize, dashboard: viewDash, u: viewProfile, people: viewPeople, messages: viewMessages, verify: viewVerify, admin: viewAdmin, fame: viewFame, settings: viewSettings };
   if (r.name === 'messages' && S.me.role === 'admin') { location.hash = '#/admin'; return; }
   const v = views[r.name] || viewDash;
-  $('app').innerHTML = shell(r, `<div class="empty">Loading…</div>`);
-  try { $('view').innerHTML = await v(r.id); } catch (e) { $('view').innerHTML = `<div class="card empty">${icon('info', 28)}<p>${esc(e.message)}</p></div>`; }
+  const key = r.name + '/' + (r.id || ''), changed = key !== lastKey;
+  lastKey = key;
+  let view = $('view');
+  if (!view || $('app').dataset.user !== String(S.me.id)) {
+    // First paint for this account: build the frame once.
+    $('app').innerHTML = shell(r); $('app').dataset.user = S.me.id; view = $('view');
+    view.innerHTML = `<div class="empty">Loading…</div>`;
+  } else {
+    // Keep the sidebar and header; only update what changed.
+    updateChrome(r);
+    if (changed) view.classList.add('leaving');
+  }
+  let html;
+  try { html = await v(r.id); } catch (e) { html = `<div class="card empty">${icon('info', 28)}<p>${esc(e.message)}</p></div>`; }
+  if (lastKey !== key) return; // a newer navigation started while this one loaded
+  view.innerHTML = html;
+  view.classList.remove('leaving');
+  if (changed) { scrollTo(0, 0); enter(view); }
   afterRender(r);
+}
+let lastKey = null;
+// Replays the entrance animation on an element.
+function enter(el) { if (!el) return; el.classList.remove('enter'); void el.offsetWidth; el.classList.add('enter'); }
+// Swaps a region's content with a short fade instead of a hard cut.
+function swap(el, html) { if (!el) return; el.innerHTML = html; el.classList.remove('soft'); void el.offsetWidth; el.classList.add('soft'); toggleOutcomeSections(); }
+function updateChrome(r) {
+  const n = $('nav'); if (n) n.outerHTML = navHTML(r);
+  const h = $('hello'); if (h) h.innerHTML = titleFor(r);
+  const b = $('bell'); if (b) b.outerHTML = bellHTML();
+}
+function titleFor(r) {
+  const hr = new Date().getHours(), greet = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
+  return r.name === 'dashboard' ? `${greet}, ${esc(first(S.me.name))}` : TITLES[r.name] || 'Dashboard';
 }
 function afterRender(r) {
   toggleOutcomeSections();
@@ -189,8 +219,7 @@ function navHTML(r) {
 const bellHTML = () => S.me.role === 'admin' ? '<span id="bell" hidden></span>' : `<button class="iconbtn" id="bell" data-go="#/messages" aria-label="Messages and requests">${icon('bell', 22)}${(S.counts.requests || 0) + (S.counts.unread || 0) ? '<span class="dot"></span>' : ''}</button>`;
 const TITLES = { placements: 'Placements', digitize: 'Digitize records', people: 'People', messages: 'Messages', verify: 'Verification', admin: 'IQAC Dashboard', fame: 'Wall of Fame', settings: 'Settings', u: 'Profile' };
 function shell(r) {
-  const hr = new Date().getHours(), greet = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
-  const hello = r.name === 'dashboard' ? `${greet}, ${esc(first(S.me.name))}` : TITLES[r.name] || 'Dashboard';
+  const hello = titleFor(r);
   return `<div class="frame">
     <aside class="side">
       <button class="logo" data-go="${home()}" aria-label="AlumniConnect home"><span class="mark">AC</span>AlumniConnect</button>
@@ -199,7 +228,7 @@ function shell(r) {
       <div class="side-foot"><button data-act="logout">${icon('out', 20)}Log out</button></div>
     </aside>
     <main class="main">
-      <header class="head"><h1 class="hello">${hello}</h1>
+      <header class="head"><h1 class="hello" id="hello">${hello}</h1>
         <form class="search" data-form="topsearch" role="search">${icon('search', 18)}<label for="top-q" hidden>Search people</label><input id="top-q" type="search" placeholder="Search people, skills, achievements" value="${esc(S.people.q)}"></form>
         ${bellHTML()}
         <button class="iconbtn mobile-only" data-act="logout" aria-label="Log out" title="Log out">${icon('out', 18)}</button>
@@ -726,7 +755,7 @@ async function viewDigitize() {
   </div>
   <div id="dg-review" style="margin-top:16px">${await digitizeReview()}</div>`;
 }
-async function refreshDigitize(full) { const el = $('dg-review'); if (el) el.innerHTML = await digitizeReview(); else if (full) rerender(); }
+async function refreshDigitize(full) { const el = $('dg-review'); if (el) swap(el, await digitizeReview()); else if (full) rerender(); }
 async function digitizeReview() {
   const st = S.dig.filter, r = await api('/api/admin/scans' + (st ? '?status=' + st : ''));
   const c = r.counts, label = { queued: 'Waiting to be read', reading: 'Being read', ready: 'Ready to check', failed: 'Couldn’t read', approved: 'Saved', discarded: 'Discarded' };
@@ -820,8 +849,8 @@ const ACT = {
   async logout() { await api('/api/auth/logout', { body: {} }).catch(() => {}); S.me = null; location.hash = '#/login'; render(); },
   explain(el) { S.explain = !S.explain; try { localStorage.setItem('ac-explain', S.explain ? '1' : '0'); } catch { } el.setAttribute('aria-pressed', S.explain); rerender(); },
   demo(el) { $('l-email').value = el.dataset.email; $('l-pass').value = 'demo1234'; $('l-pass').form.requestSubmit(); },
-  async path(el) { S.people.path = S.people.path === el.dataset.k ? '' : el.dataset.k; S.people.limit = 24; document.querySelectorAll('[data-act=path]').forEach(b => b.setAttribute('aria-pressed', b.dataset.k === S.people.path)); $('presults').innerHTML = await peopleResults(); },
-  async more() { S.people.limit += 24; $('presults').innerHTML = await peopleResults(); },
+  async path(el) { S.people.path = S.people.path === el.dataset.k ? '' : el.dataset.k; S.people.limit = 24; document.querySelectorAll('[data-act=path]').forEach(b => b.setAttribute('aria-pressed', b.dataset.k === S.people.path)); swap($('presults'), await peopleResults()); },
+  async more() { S.people.limit += 24; swap($('presults'), await peopleResults()); },
   ask(el) { openModal({ type: 'ask', id: Number(el.dataset.id), name: el.dataset.name }); },
   add() { openModal({ type: 'add' }); },
   report(el) { openModal({ type: 'report', id: Number(el.dataset.id), name: el.dataset.name }); },
@@ -882,8 +911,8 @@ const ACT = {
     try { await api(url, { body: { action, note } }); toast(action === 'approve' ? 'Approved. They’ve been notified.' : action === 'reject' ? 'Rejected. The reason was sent.' : 'Request for more information sent.');
       S.ver.sel = null; S.ver.mode = null; await refreshCounts(); updateBadges(); rerender(); } catch (e) { toast(e.message); }
   },
-  async atab(el) { S.adm.tab = el.dataset.k; document.querySelectorAll('[data-act=atab]').forEach(b => b.setAttribute('aria-pressed', b.dataset.k === S.adm.tab)); $('aregion').innerHTML = await adminRegion(); },
-  async rpage(el) { S.adm.rpage = Math.max(0, S.adm.rpage + Number(el.dataset.k)); $('aregion').innerHTML = await adminRegion(); },
+  async atab(el) { S.adm.tab = el.dataset.k; document.querySelectorAll('[data-act=atab]').forEach(b => b.setAttribute('aria-pressed', b.dataset.k === S.adm.tab)); swap($('aregion'), await adminRegion()); },
+  async rpage(el) { S.adm.rpage = Math.max(0, S.adm.rpage + Number(el.dataset.k)); swap($('aregion'), await adminRegion()); },
   async remind() { try { const r = await api('/api/admin/remind', { body: {} }); toast(`Reminder queued for ${fmtN(r.count)} alumni`); } catch (e) { toast(e.message); } }
 };
 document.addEventListener('click', e => {
@@ -893,16 +922,16 @@ document.addEventListener('click', e => {
 let typeT;
 document.addEventListener('input', e => {
   const el = e.target;
-  if (el.dataset.p && el.type !== 'checkbox' && el.tagName !== 'SELECT') { S.people[el.dataset.p] = el.value; S.people.limit = 24; clearTimeout(typeT); typeT = setTimeout(async () => { $('presults').innerHTML = await peopleResults(); }, 250); }
+  if (el.dataset.p && el.type !== 'checkbox' && el.tagName !== 'SELECT') { S.people[el.dataset.p] = el.value; S.people.limit = 24; clearTimeout(typeT); typeT = setTimeout(async () => { swap($('presults'), await peopleResults()); }, 250); }
   if (el.dataset.pls !== undefined) { S.plc.q = el.value.toLowerCase(); document.querySelectorAll('[data-plrow]').forEach(r => { r.hidden = S.plc.q && !r.dataset.plrow.includes(S.plc.q); }); }
   if (el.dataset.a === 'rq') { S.adm.rq = el.value; S.adm.rpage = 0; clearTimeout(typeT); typeT = setTimeout(async () => { $('aregion').innerHTML = await adminRegion(); const i = $('a-rq'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 300); }
 });
 document.addEventListener('change', async e => {
   const el = e.target;
-  if (el.dataset.p && (el.type === 'checkbox' || el.tagName === 'SELECT')) { S.people[el.dataset.p] = el.type === 'checkbox' ? el.checked : el.value; S.people.limit = 24; $('presults').innerHTML = await peopleResults(); }
+  if (el.dataset.p && (el.type === 'checkbox' || el.tagName === 'SELECT')) { S.people[el.dataset.p] = el.type === 'checkbox' ? el.checked : el.value; S.people.limit = 24; swap($('presults'), await peopleResults()); }
   if (el.dataset.pl) { S.plc[el.dataset.pl] = el.value; rerender(); return; }
   if (el.dataset.ostatus !== undefined) toggleOutcomeSections();
-  if (el.dataset.a && el.tagName === 'SELECT') { S.adm[el.dataset.a] = el.value; S.adm.rpage = 0; $('aregion').innerHTML = await adminRegion(); }
+  if (el.dataset.a && el.tagName === 'SELECT') { S.adm[el.dataset.a] = el.value; S.adm.rpage = 0; swap($('aregion'), await adminRegion()); }
 });
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && S.modal) closeModal();
