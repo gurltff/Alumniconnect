@@ -43,6 +43,14 @@ The **Feature notes** switch in the header adds a short note to each screen on h
 - **Placements.** For IQAC and faculty: graduates, placed %, on-campus and off-campus %, higher studies %, average, median and highest package, by batch and by course, year by year, by recruiter, plus every graduate's outcome (CSV download). Students see the totals without names.
 - **IQAC.** KPIs, charts, a department filter, a register of every record, registration approvals, reports with CSV export (student progression, awards and medals, NIRF graduation outcomes, alumni engagement), status reminders and an audit log.
 
+## Debugging in VS Code
+
+1. Open the folder in VS Code and run `npm install` in the terminal (needs Node.js 22.13 or newer).
+2. Run **Reset sample data (seed)** once from the Run and Debug panel (or `npm run seed`).
+3. Press F5 on **Run server (debug)** and set breakpoints in `server/*.js`.
+4. Use **Server + Chrome** to also debug `public/app.js` in the browser, or open http://localhost:3000 yourself and use the browser's DevTools.
+5. The recommended SQLite Viewer extension opens `data/alumniconnect.db` so you can see the tables.
+
 ## Turning on AI reading of scanned forms
 
 Set the environment variable `ANTHROPIC_API_KEY` on the server (on Render: the service's **Environment** tab). The server then reads queued scans two at a time with Claude (`claude-opus-5-5`) and returns the fields as structured JSON. Every result is checked by a person before it is saved. Without the key, everything else works and scans are filled in by hand.

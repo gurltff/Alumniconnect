@@ -1,0 +1,34 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Run server (debug)",
+      "program": "${workspaceFolder}/server/index.js",
+      "runtimeArgs": ["--no-warnings"],
+      "env": { "PORT": "3000" },
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Reset sample data (seed)",
+      "program": "${workspaceFolder}/server/seed.js",
+      "runtimeArgs": ["--no-warnings"],
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "type": "chrome",
+      "request": "launch",
+      "name": "Open app in Chrome (debug frontend)",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}/public"
+    }
+  ],
+  "compounds": [
+    { "name": "Server + Chrome", "configurations": ["Run server (debug)", "Open app in Chrome (debug frontend)"] }
+  ]
+}
